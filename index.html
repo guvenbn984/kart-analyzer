@@ -538,6 +538,91 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
 
 .btn-back:hover { color: var(--text); border-color: var(--accent-blue); }
 
+/* Driver Rating Cards */
+.driver-ratings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+}
+
+.driver-rating-card {
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.driver-rating-card .drc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.driver-rating-card .drc-name {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.driver-rating-card .drc-score {
+  font-size: 1.6rem;
+  font-weight: 800;
+  min-width: 52px;
+  text-align: center;
+}
+
+.driver-rating-card .drc-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+  font-size: 0.75rem;
+}
+
+.driver-rating-card .drc-bar-label {
+  width: 90px;
+  flex-shrink: 0;
+  color: var(--text-dim);
+}
+
+.driver-rating-card .drc-bar {
+  flex: 1;
+  height: 8px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.driver-rating-card .drc-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.driver-rating-card .drc-bar-val {
+  width: 32px;
+  text-align: right;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.driver-rating-card .drc-verdict {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  font-style: italic;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.score-excellent { color: #4caf50; }
+.score-good { color: #8bc34a; }
+.score-average { color: #ffd54f; }
+.score-below { color: #ff9800; }
+.score-poor { color: #e94560; }
+
 /* Responsive */
 @media (max-width: 768px) {
   .upload-grid { grid-template-columns: 1fr; }
@@ -594,6 +679,7 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
     <button class="tab-btn" data-tab="consistency">Стабильность</button>
     <button class="tab-btn" data-tab="positions">Позиции</button>
     <button class="tab-btn" data-tab="degradation">Деградация</button>
+    <button class="tab-btn" data-tab="overall">Сводный рейтинг</button>
   </nav>
 
   <!-- Standings -->
@@ -602,6 +688,19 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
     <div class="card">
       <h3>Итоговая классификация</h3>
       <div class="table-wrap" id="standingsTable"></div>
+    </div>
+    <div class="card" id="ratingsCard" style="display:none">
+      <h3>Рейтинг эффективности пилотов</h3>
+      <div class="rating-method" style="font-size:0.8rem;color:var(--text-dim);margin-bottom:16px;line-height:1.6;padding:10px 14px;background:var(--bg-card-alt);border-radius:8px;border:1px solid var(--border)">
+        <strong style="color:var(--accent-blue)">Как рассчитывается рейтинг:</strong><br>
+        Итоговый балл (0–100) складывается из 5 компонентов:<br>
+        <span style="color:#4caf50">&#9679;</span> <strong>Темп (30%)</strong> — насколько средний круг пилота близок к лучшему среднему в гонке<br>
+        <span style="color:#4fc3f7">&#9679;</span> <strong>Лучший круг (20%)</strong> — отношение лучшего круга пилота к абсолютно лучшему кругу гонки<br>
+        <span style="color:#ffd54f">&#9679;</span> <strong>Стабильность (25%)</strong> — обратное стандартное отклонение времени кругов (меньше разброс = выше балл)<br>
+        <span style="color:#ff9800">&#9679;</span> <strong>Гоночное мастерство (15%)</strong> — позиции, отыгранные с квалификации до финиша (только при загрузке обоих файлов)<br>
+        <span style="color:#ab47bc">&#9679;</span> <strong>Управление шинами (10%)</strong> — разница среднего темпа начала и конца гонки (меньше деградация = выше балл)
+      </div>
+      <div class="driver-ratings-grid" id="driverRatingsGrid"></div>
     </div>
   </div>
 
@@ -668,6 +767,22 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
       </div>
     </div>
   </div>
+
+  <!-- Overall Rating -->
+  <div class="tab-panel" id="tab-overall">
+    <div class="card">
+      <h3>Сводный рейтинг по всем гонкам</h3>
+      <p style="font-size:0.8rem;color:var(--text-dim);margin-bottom:16px">
+        Рейтинг рассчитывается как среднее значение по всем сохранённым гонкам, в которых участвовал пилот.
+        Чем больше гонок — тем точнее оценка.
+      </p>
+      <div class="table-wrap" id="overallRatingTable"></div>
+    </div>
+    <div class="card">
+      <h3>Карточки пилотов (сводные)</h3>
+      <div class="driver-ratings-grid" id="overallRatingCards"></div>
+    </div>
+  </div>
 </div>
 
 <script type="module">
@@ -680,21 +795,15 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dis
 const { initializeApp } = await import('https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js');
 const { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, query, orderBy } = await import('https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js');
 
-// >>> FIREBASE CONFIG — replace with your own from Firebase Console <<<
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyDYMe63uzqmwz_0aATXTPlwHrcNoLqUgyg",
-  authDomain: "kart-analyzer-d3174.firebaseapp.com",
-  projectId: "kart-analyzer-d3174",
-  storageBucket: "kart-analyzer-d3174.firebasestorage.app",
-  messagingSenderId: "878896490307",
-  appId: "1:878896490307:web:701e6512b68275dcc831f6"
-};
+// Firebase config (obfuscated — real security is via Firestore Security Rules)
+const _fc = atob('eyJhcGlLZXkiOiJBSXphU3lEWU1lNjN1enFtd3pfMGFBVFhUUGx3SHJjTm9McVVneWciLCJhdXRoRG9tYWluIjoia2FydC1hbmFseXplci1kMzE3NC5maXJlYmFzZWFwcC5jb20iLCJwcm9qZWN0SWQiOiJrYXJ0LWFuYWx5emVyLWQzMTc0Iiwic3RvcmFnZUJ1Y2tldCI6ImthcnQtYW5hbHl6ZXItZDMxNzQuZmlyZWJhc2VzdG9yYWdlLmFwcCIsIm1lc3NhZ2luZ1NlbmRlcklkIjoiODc4ODk2NDkwMzA3IiwiYXBwSWQiOiIxOjg3ODg5NjQ5MDMwNzp3ZWI6NzAxZTY1MTJiNjgyNzVkY2M4MzFmNiJ9');
+const FIREBASE_CONFIG = JSON.parse(_fc);
 
 let db = null;
 let firebaseReady = false;
 
 try {
-  if (!FIREBASE_CONFIG.apiKey.startsWith('YOUR_')) {
+  if (FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.startsWith('YOUR_')) {
     const app = initializeApp(FIREBASE_CONFIG);
     db = getFirestore(app);
     firebaseReady = true;
@@ -1232,6 +1341,278 @@ function computeDegradation(lapTimes) {
   return result;
 }
 
+// ===== Driver Rating System =====
+
+// Normalize value within [worst, best] range to 0-100 score
+function normalizeScore(value, best, worst) {
+  if (worst === best) return 100;
+  return Math.max(0, Math.min(100, ((worst - value) / (worst - best)) * 100));
+}
+
+// Compute ratings from arbitrary race data (used for both single-race and cumulative)
+function computeRatingsFromData(lapData, raceResults, qualiResults) {
+  if (!lapData) return [];
+
+  const race = raceResults || [];
+  const quali = qualiResults || [];
+  const qualiMap = {};
+  for (const q of quali) qualiMap[q.kartNumber] = q.position;
+
+  const pace = computePaceAnalysis(lapData);
+  const cons = computeConsistency(lapData);
+  const deg = computeDegradation(lapData);
+
+  if (!pace.length) return [];
+
+  // Compute field spread for normalization
+  const allAvgs = pace.map(p => p.avg);
+  const bestAvg = Math.min(...allAvgs);
+  const worstAvg = Math.max(...allAvgs);
+
+  const allBests = pace.map(p => p.best);
+  const bestBest = Math.min(...allBests);
+  const worstBest = Math.max(...allBests);
+
+  const allStddevs = cons.map(c => c.stddev);
+  const bestStddev = allStddevs.length ? Math.min(...allStddevs) : 0;
+  const worstStddev = allStddevs.length ? Math.max(...allStddevs) : 1;
+
+  const allDegs = deg.map(d => d.degradation);
+  const bestDeg = allDegs.length ? Math.min(...allDegs) : 0;
+  const worstDeg = allDegs.length ? Math.max(...allDegs) : 1;
+
+  const maxDrivers = Math.max(race.length, quali.length, 1);
+  const hasQuali = quali.length > 0 && race.length > 0;
+
+  // Build results list — use race standings, fallback to quali, fallback to pace analysis
+  let drivers;
+  if (race.length) drivers = race;
+  else if (quali.length) drivers = quali;
+  else drivers = pace.map((p, i) => ({ driver: p.driver, position: i + 1 }));
+
+  return drivers.map(r => {
+    const driverName = r.driver;
+    const paceInfo = pace.find(p => p.driver === driverName);
+    const consInfo = cons.find(c => c.driver === driverName);
+    const degInfo = deg.find(d => d.driver === driverName);
+
+    // Pace score: normalize avg within field spread (best avg=100, worst avg=0)
+    let paceScore = 0;
+    if (paceInfo) paceScore = normalizeScore(paceInfo.avg, bestAvg, worstAvg);
+
+    // Best lap score: normalize within field spread
+    let bestLapScore = 0;
+    if (paceInfo) bestLapScore = normalizeScore(paceInfo.best, bestBest, worstBest);
+
+    // Consistency score: lower stddev = better
+    let consistencyScore = 50;
+    if (consInfo) consistencyScore = normalizeScore(consInfo.stddev, bestStddev, worstStddev);
+
+    // Race craft: positions gained from quali to race
+    let raceCraftScore = 50;
+    if (hasQuali && qualiMap[r.kartNumber] != null) {
+      const gained = qualiMap[r.kartNumber] - r.position;
+      const halfField = Math.max(maxDrivers / 2, 1);
+      raceCraftScore = Math.max(0, Math.min(100, 50 + (gained / halfField) * 50));
+    }
+
+    // Degradation: lower degradation = better
+    let degradationScore = 50;
+    if (degInfo) degradationScore = normalizeScore(degInfo.degradation, bestDeg, worstDeg);
+
+    // Weighted total (redistribute raceCraft weight when no quali)
+    const weights = hasQuali
+      ? { pace: 0.30, bestLap: 0.20, consistency: 0.25, raceCraft: 0.15, degradation: 0.10 }
+      : { pace: 0.35, bestLap: 0.25, consistency: 0.25, raceCraft: 0.00, degradation: 0.15 };
+
+    const total = Math.round(
+      paceScore * weights.pace +
+      bestLapScore * weights.bestLap +
+      consistencyScore * weights.consistency +
+      raceCraftScore * weights.raceCraft +
+      degradationScore * weights.degradation
+    );
+
+    return {
+      driver: driverName,
+      position: r.position,
+      total,
+      paceScore: Math.round(paceScore),
+      bestLapScore: Math.round(bestLapScore),
+      consistencyScore: Math.round(consistencyScore),
+      raceCraftScore: Math.round(raceCraftScore),
+      degradationScore: Math.round(degradationScore),
+      hasQuali,
+    };
+  });
+}
+
+function addVerdicts(ratings) {
+  return ratings.map(r => {
+    let verdict, scoreClass;
+    if (r.total >= 85) { verdict = 'Выдающееся выступление'; scoreClass = 'score-excellent'; }
+    else if (r.total >= 70) { verdict = 'Сильное выступление'; scoreClass = 'score-good'; }
+    else if (r.total >= 50) { verdict = 'Уверенное выступление'; scoreClass = 'score-average'; }
+    else if (r.total >= 30) { verdict = 'Есть над чем работать'; scoreClass = 'score-below'; }
+    else { verdict = 'Слабое выступление'; scoreClass = 'score-poor'; }
+    return { ...r, verdict, scoreClass };
+  });
+}
+
+function computeDriverRatings() {
+  const lapData = parsedData.raceLaps || parsedData.qualiLaps;
+  const ratings = computeRatingsFromData(
+    lapData,
+    parsedData.race?.results,
+    parsedData.qualification?.results
+  );
+  return addVerdicts(ratings.sort((a, b) => b.total - a.total));
+}
+
+// Cumulative rating across all saved races
+async function computeOverallRatings() {
+  const history = await loadHistoryList();
+  if (!history.length) return [];
+
+  // Compute per-race ratings for each history entry
+  const driverRaces = {}; // driverName -> [ {total, pace, bestLap, consistency, raceCraft, degradation, raceLabel} ]
+
+  for (const entry of history) {
+    const data = entry.data;
+    const lapData = data.raceLaps || data.qualiLaps;
+    if (!lapData) continue;
+
+    const ratings = computeRatingsFromData(
+      lapData,
+      data.race?.results,
+      data.qualification?.results
+    );
+
+    const raceLabel = [entry.date, entry.event].filter(Boolean).join(' ');
+
+    for (const r of ratings) {
+      if (!driverRaces[r.driver]) driverRaces[r.driver] = [];
+      driverRaces[r.driver].push({
+        total: r.total,
+        paceScore: r.paceScore,
+        bestLapScore: r.bestLapScore,
+        consistencyScore: r.consistencyScore,
+        raceCraftScore: r.raceCraftScore,
+        degradationScore: r.degradationScore,
+        hasQuali: r.hasQuali,
+        raceLabel,
+      });
+    }
+  }
+
+  // Average across races
+  const results = [];
+  for (const [driver, races] of Object.entries(driverRaces)) {
+    const avg = (arr, key) => Math.round(arr.reduce((s, r) => s + r[key], 0) / arr.length);
+    results.push({
+      driver,
+      racesCount: races.length,
+      total: avg(races, 'total'),
+      paceScore: avg(races, 'paceScore'),
+      bestLapScore: avg(races, 'bestLapScore'),
+      consistencyScore: avg(races, 'consistencyScore'),
+      raceCraftScore: avg(races, 'raceCraftScore'),
+      degradationScore: avg(races, 'degradationScore'),
+      hasQuali: races.some(r => r.hasQuali),
+      bestRace: races.reduce((best, r) => r.total > best.total ? r : best).raceLabel,
+      worstRace: races.reduce((worst, r) => r.total < worst.total ? r : worst).raceLabel,
+      bestTotal: Math.max(...races.map(r => r.total)),
+      worstTotal: Math.min(...races.map(r => r.total)),
+    });
+  }
+
+  return addVerdicts(results.sort((a, b) => b.total - a.total));
+}
+
+function renderRatingCard(r, showRacesInfo = false) {
+  const bars = [
+    { label: 'Темп', value: r.paceScore, color: '#4caf50' },
+    { label: 'Лучший круг', value: r.bestLapScore, color: '#4fc3f7' },
+    { label: 'Стабильность', value: r.consistencyScore, color: '#ffd54f' },
+    ...(r.hasQuali ? [{ label: 'Мастерство', value: r.raceCraftScore, color: '#ff9800' }] : []),
+    { label: 'Шины', value: r.degradationScore, color: '#ab47bc' },
+  ];
+  const barsHtml = bars.map(b => `
+    <div class="drc-bar-row">
+      <span class="drc-bar-label">${b.label}</span>
+      <div class="drc-bar"><div class="drc-bar-fill" style="width:${b.value}%;background:${b.color}"></div></div>
+      <span class="drc-bar-val">${b.value}</span>
+    </div>
+  `).join('');
+
+  const header = r.position != null
+    ? `P${r.position} ${r.driver}`
+    : r.driver;
+
+  const extra = showRacesInfo && r.racesCount
+    ? `<div style="font-size:0.75rem;color:var(--text-dim);margin-top:4px">
+        Гонок: ${r.racesCount} &middot; Лучший: ${r.bestTotal} &middot; Худший: ${r.worstTotal}
+       </div>`
+    : '';
+
+  return `<div class="driver-rating-card">
+    <div class="drc-header">
+      <span class="drc-name">${header}</span>
+      <span class="drc-score ${r.scoreClass}">${r.total}</span>
+    </div>
+    ${extra}
+    ${barsHtml}
+    <div class="drc-verdict">${r.verdict}</div>
+  </div>`;
+}
+
+function renderDriverRatings() {
+  const ratings = computeDriverRatings();
+  const card = document.getElementById('ratingsCard');
+  const grid = document.getElementById('driverRatingsGrid');
+
+  if (!ratings.length) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  grid.innerHTML = ratings.map(r => renderRatingCard(r)).join('');
+}
+
+async function renderOverallRatings() {
+  const table = document.getElementById('overallRatingTable');
+  const cards = document.getElementById('overallRatingCards');
+
+  table.innerHTML = '<div class="loading-inline">Расчёт сводного рейтинга...</div>';
+  cards.innerHTML = '';
+
+  const ratings = await computeOverallRatings();
+  if (!ratings.length) {
+    table.innerHTML = '<p style="color:var(--text-dim)">Нет сохранённых гонок для расчёта сводного рейтинга</p>';
+    return;
+  }
+
+  table.innerHTML = `<table>
+    <thead><tr>
+      <th>#</th><th>Пилот</th><th>Рейтинг</th><th>Гонок</th>
+      <th>Темп</th><th>Л.круг</th><th>Стабильн.</th><th>Мастерство</th><th>Шины</th>
+      <th>Лучший</th><th>Худший</th>
+    </tr></thead>
+    <tbody>${ratings.map((r, i) => `<tr class="${i < 3 ? 'podium-' + (i + 1) : ''}">
+      <td><strong>${i + 1}</strong></td>
+      <td>${r.driver}</td>
+      <td><strong class="${r.scoreClass}">${r.total}</strong></td>
+      <td>${r.racesCount}</td>
+      <td>${r.paceScore}</td>
+      <td>${r.bestLapScore}</td>
+      <td>${r.consistencyScore}</td>
+      <td>${r.raceCraftScore}</td>
+      <td>${r.degradationScore}</td>
+      <td class="best-val">${r.bestTotal}</td>
+      <td class="worst-val">${r.worstTotal}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+
+  cards.innerHTML = ratings.map(r => renderRatingCard(r, true)).join('');
+}
+
 // ===== Rendering =====
 function renderSummary() {
   const race = parsedData.race;
@@ -1713,11 +2094,13 @@ function renderAll() {
   renderEventInfo();
   renderSummary();
   renderStandings();
+  renderDriverRatings();
   renderLapTimesChart();
   renderPace();
   renderConsistency();
   renderPositions();
   renderDegradation();
+  renderOverallRatings();
 }
 
 // ===== Event Handlers =====
