@@ -824,14 +824,23 @@ let historyCache = [];
 
 function buildEntry(data) {
   const m = data.meta || {};
-  const docId = [m.date || 'unknown', m.event || '', m.sessionType || ''].join('_').replace(/[\/\.\s]+/g, '-');
+  // Build session label: "Гонка 2", "Квалификация", "Гонка" etc.
+  const sessionLabel = m.sessionType
+    ? (m.raceNumber ? `${m.sessionType} ${m.raceNumber}` : m.sessionType)
+    : '';
+  // Include raceNumber and time in docId to distinguish multiple races per day
+  const idParts = [m.date || 'unknown', m.event || '', sessionLabel];
+  if (!m.raceNumber && m.time) idParts.push(m.time); // fallback: use time if no race number
+  const docId = idParts.join('_').replace(/[\/\.\s:]+/g, '-');
   return {
     id: docId,
     date: m.date || 'Неизвестно',
     event: m.event || '',
-    sessionType: m.sessionType || '',
+    sessionType: sessionLabel || m.sessionType || '',
     track: m.track || '',
     category: m.category || '',
+    raceNumber: m.raceNumber || null,
+    time: m.time || '',
     savedAt: new Date().toISOString(),
     driversCount: (data.race?.results || data.qualification?.results || []).length,
     winner: (data.race?.results?.[0] || data.qualification?.results?.[0])?.driver || '-',
@@ -936,11 +945,13 @@ async function renderHistory() {
 
   list.innerHTML = history.map(h => {
     const parts = [h.event, h.sessionType, h.category].filter(Boolean).join(' / ');
+    const timeStr = h.time ? ` (${h.time.substring(0, 5)})` : '';
     const details = [`${h.driversCount} пилотов`, `Победитель: ${h.winner}`].join(' &middot; ');
+    const icon = h.sessionType?.includes('Квалификация') ? '&#9201;' : '&#127937;';
     return `<div class="history-item" data-id="${h.id}">
-      <div class="hi-icon">&#127937;</div>
+      <div class="hi-icon">${icon}</div>
       <div class="hi-info">
-        <div class="hi-title">${h.date} — ${parts || 'Сессия'}</div>
+        <div class="hi-title">${h.date}${timeStr} — ${parts || 'Сессия'}</div>
         <div class="hi-details">${details}</div>
       </div>
       <button class="hi-delete" data-id="${h.id}" title="Удалить">&#10005;</button>
@@ -1068,7 +1079,7 @@ async function extractTextRows(file) {
 }
 
 // ===== Metadata Extraction =====
-function parseMeta(rows) {
+function parseMeta(rows, fileName) {
   const meta = {};
   for (const row of rows) {
     const joined = row.texts.join(' ');
@@ -1076,14 +1087,41 @@ function parseMeta(rows) {
       const dateMatch = joined.match(/(\d{2}\.\d{2}\.\d{4})/);
       if (dateMatch) meta.date = dateMatch[1];
     }
+    if (!meta.time) {
+      const timeMatch = joined.match(/(\d{2}:\d{2}:\d{2})/);
+      if (timeMatch) meta.time = timeMatch[1];
+    }
     if (!meta.track && joined.includes('Lemans')) meta.track = 'Lemans City';
     if (!meta.event && joined.includes('CityFight')) meta.event = 'CityFight';
-    if (!meta.sessionType && joined.includes('Гонка')) meta.sessionType = 'Гонка';
-    if (!meta.sessionType && (joined.includes('Rent karts') || joined.includes('Прокат'))) meta.sessionType = 'Квалификация';
+    // Detect session type with race/heat number
+    if (!meta.sessionType) {
+      // "Гонка 1", "Гонка 2", "Race 1", "Race 2", "Heat 1" etc.
+      const raceNumMatch = joined.match(/(?:Гонка|Race|Heat|Заезд)\s*(\d+)/i);
+      if (raceNumMatch) {
+        meta.sessionType = 'Гонка';
+        meta.raceNumber = parseInt(raceNumMatch[1]);
+      } else if (joined.includes('Гонка')) {
+        meta.sessionType = 'Гонка';
+      } else if (joined.includes('Rent karts') || joined.includes('Прокат')) {
+        meta.sessionType = 'Квалификация';
+      }
+      // "Квалификация 1", "Квалификация 2"
+      const qualiNumMatch = joined.match(/(?:Квалификация|Qualification|Qualify)\s*(\d+)/i);
+      if (qualiNumMatch) {
+        meta.sessionType = 'Квалификация';
+        meta.raceNumber = parseInt(qualiNumMatch[1]);
+      }
+    }
     if (!meta.category && joined.includes('Любители')) meta.category = 'Любители';
-    // Stop early once we have everything
-    if (meta.date && meta.track && meta.event && meta.sessionType) break;
+    if (meta.date && meta.track && meta.event && meta.sessionType && meta.time) break;
   }
+
+  // Try to extract race number from filename (e.g. R1, R2, Race1, Race2, Q1, Q2, Гонка1)
+  if (!meta.raceNumber && fileName) {
+    const fnMatch = fileName.match(/(?:R|Race|Гонка|Q|Heat|Заезд)\s*(\d+)/i);
+    if (fnMatch) meta.raceNumber = parseInt(fnMatch[1]);
+  }
+
   return meta;
 }
 
@@ -1334,8 +1372,10 @@ function computeDegradation(lapTimes) {
     const avgMid = mid.reduce((a, b) => a + b, 0) / mid.length;
     const avgLate = late.reduce((a, b) => a + b, 0) / late.length;
     const degradation = avgLate - avgEarly;
+    // Percentage-based degradation relative to driver's own early pace
+    const degradationPct = (avgLate - avgEarly) / avgEarly * 100;
 
-    result.push({ driver, avgEarly, avgMid, avgLate, degradation });
+    result.push({ driver, avgEarly, avgMid, avgLate, degradation, degradationPct });
   }
   result.sort((a, b) => a.degradation - b.degradation);
   return result;
@@ -1377,9 +1417,9 @@ function computeRatingsFromData(lapData, raceResults, qualiResults) {
   const bestStddev = allStddevs.length ? Math.min(...allStddevs) : 0;
   const worstStddev = allStddevs.length ? Math.max(...allStddevs) : 1;
 
-  const allDegs = deg.map(d => d.degradation);
-  const bestDeg = allDegs.length ? Math.min(...allDegs) : 0;
-  const worstDeg = allDegs.length ? Math.max(...allDegs) : 1;
+  // For degradation: use percentage-based, cap negatives at 0
+  // Use median-anchored scale: 0% = 100pts, median = 60pts, 2*median = 20pts
+  const allDegsPct = deg.map(d => Math.max(0, d.degradationPct));
 
   const maxDrivers = Math.max(race.length, quali.length, 1);
   const hasQuali = quali.length > 0 && race.length > 0;
@@ -1416,9 +1456,14 @@ function computeRatingsFromData(lapData, raceResults, qualiResults) {
       raceCraftScore = Math.max(0, Math.min(100, 50 + (gained / halfField) * 50));
     }
 
-    // Degradation: lower degradation = better
+    // Degradation: 0% = 100pts, field worst gets ~20pts (not 0), linear scale
     let degradationScore = 50;
-    if (degInfo) degradationScore = normalizeScore(degInfo.degradation, bestDeg, worstDeg);
+    if (degInfo && allDegsPct.length) {
+      const capped = Math.max(0, degInfo.degradationPct);
+      const worstPosDeg = Math.max(...allDegsPct, 0.1);
+      // Pad worst by 25% so worst driver gets ~20 instead of 0
+      degradationScore = Math.round(normalizeScore(capped, 0, worstPosDeg * 1.25));
+    }
 
     // Weighted total (redistribute raceCraft weight when no quali)
     const weights = hasQuali
@@ -1647,8 +1692,12 @@ function renderEventInfo() {
   if (m.track) parts.push(`<span>Трек:</span> <strong>${m.track}</strong>`);
   if (m.event) parts.push(`<span>Событие:</span> <strong>${m.event}</strong>`);
   if (m.date) parts.push(`<span>Дата:</span> <strong>${m.date}</strong>`);
+  if (m.time) parts.push(`<span>Время:</span> <strong>${m.time.substring(0, 5)}</strong>`);
   if (m.category) parts.push(`<span>Класс:</span> <strong>${m.category}</strong>`);
-  if (m.sessionType) parts.push(`<span>Сессия:</span> <strong>${m.sessionType}</strong>`);
+  const sessionLabel = m.sessionType
+    ? (m.raceNumber ? `${m.sessionType} ${m.raceNumber}` : m.sessionType)
+    : '';
+  if (sessionLabel) parts.push(`<span>Сессия:</span> <strong>${sessionLabel}</strong>`);
   el.innerHTML = parts.join(' &nbsp;|&nbsp; ');
 }
 
@@ -2160,12 +2209,15 @@ document.getElementById('btnAnalyze').addEventListener('click', async () => {
   btn.textContent = 'Обработка...';
 
   try {
+    // Reset parsedData for fresh analysis
+    parsedData = { qualification: null, race: null, qualiLaps: null, raceLaps: null, meta: {} };
+
     if (qualiFile) {
       const rows = await extractTextRows(qualiFile);
       const parsed = parseQualification(rows);
       parsedData.qualification = { results: parsed.results };
       parsedData.qualiLaps = parsed.lapTimes;
-      Object.assign(parsedData.meta, parseMeta(rows));
+      Object.assign(parsedData.meta, parseMeta(rows, qualiFile.name));
     }
 
     if (raceFile) {
@@ -2173,7 +2225,7 @@ document.getElementById('btnAnalyze').addEventListener('click', async () => {
       const parsed = parseRace(rows);
       parsedData.race = { results: parsed.results };
       parsedData.raceLaps = parsed.lapTimes;
-      Object.assign(parsedData.meta, parseMeta(rows));
+      Object.assign(parsedData.meta, parseMeta(rows, raceFile.name));
     }
 
     selectedDrivers.clear();
