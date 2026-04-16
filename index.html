@@ -1131,6 +1131,7 @@ function parseQualification(rows) {
   const lapTimes = {};
   let mode = 'search'; // search -> standings -> laps
   let driverColumns = []; // [{name, x}]
+  let qColAnchors = null; // header X positions
 
   for (let i = 0; i < rows.length; i++) {
     const texts = rows[i].texts;
@@ -1138,6 +1139,17 @@ function parseQualification(rows) {
 
     if (mode === 'search') {
       if (joined.includes('Место') && joined.includes('Пилот') && joined.includes('Время')) {
+        // Extract column positions from header
+        const hm = {};
+        for (const it of rows[i].items) {
+          if (it.text === 'Место') hm.pos = it.x;
+          else if (it.text === 'Nr.' || it.text === 'Nr') hm.nr = it.x;
+          else if (it.text === 'Пилот') hm.driver = it.x;
+          else if (it.text === 'Время') hm.time = it.x;
+          else if (it.text === 'Разрыв') hm.gap = it.x;
+          else if (it.text === 'Круг') hm.lap = it.x;
+        }
+        if (hm.pos && hm.driver) qColAnchors = hm;
         mode = 'standings';
         continue;
       }
@@ -1150,7 +1162,7 @@ function parseQualification(rows) {
     }
 
     if (mode === 'standings') {
-      // Check if this row starts a lap times grid (driver names as headers)
+      // Check if this row starts a lap times grid (driver names or Kart headers)
       if (texts.length >= 4) {
         const kartPattern = texts.filter(t => /^Kart\s*\d+/.test(t));
         if (kartPattern.length >= 3) {
@@ -1158,23 +1170,61 @@ function parseQualification(rows) {
           mode = 'laps';
           continue;
         }
+        // Also check for name-based headers (non-Kart quali formats)
+        const namePattern = /^[А-Яа-яA-Za-z][А-Яа-яa-z]+$/;
+        const names = texts.filter(t => namePattern.test(t) && t.length > 2);
+        const firstIsNumber = /^\d+$/.test(texts[0]);
+        if (names.length >= 4 && !firstIsNumber) {
+          driverColumns = rows[i].items.filter(it => /^[А-Яа-яA-Za-z]/.test(it.text) && it.text.length > 2).map(it => ({ name: it.text, x: it.x }));
+          mode = 'laps';
+          continue;
+        }
       }
 
-      // X-position-based parsing for quali: Pos ~39, Nr ~66, Driver ~105, Time ~165, Gap ~213, Lap ~259
-      // "Лучшее время дня" starts at x~310
       if (joined.includes('Лучшее время')) continue;
-      const coreItems = rows[i].items.filter(it => it.x < 300);
-      const getByX = (min, max) => coreItems.filter(it => it.x >= min && it.x < max).map(it => it.text).join(' ');
-      const posText = getByX(30, 60);
-      const position = parseInt(posText);
-      if (isNaN(position)) continue;
-      const kartNumber = parseInt(getByX(60, 100));
-      const driver = getByX(100, 160);
-      const time = parseTime(getByX(160, 210));
-      const gapRaw = getByX(210, 255);
-      const gap = gapRaw ? gapRaw.replace(/\s+\d+$/, '') : '-'; // strip trailing lap number
-      if (driver && time) {
-        results.push({ position, kartNumber, driver, time, gap });
+      if (joined.includes('Абсолютно лучшее')) continue;
+
+      // Adaptive X-position parsing using header anchors
+      const maxCoreX = qColAnchors?.lap ? qColAnchors.lap + 30 : 300;
+      const coreItems = rows[i].items.filter(it => it.x < maxCoreX);
+
+      if (qColAnchors) {
+        const colData = {};
+        const colKeys = Object.keys(qColAnchors);
+        for (const it of coreItems) {
+          let bestKey = null, bestDist = Infinity;
+          for (const k of colKeys) {
+            const d = Math.abs(it.x - qColAnchors[k]);
+            if (d < bestDist) { bestDist = d; bestKey = k; }
+          }
+          if (bestKey && bestDist < 50) {
+            colData[bestKey] = (colData[bestKey] || '') + (colData[bestKey] ? ' ' : '') + it.text;
+          }
+        }
+
+        const position = parseInt(colData.pos || '');
+        if (isNaN(position)) continue;
+        const kartNumber = parseInt(colData.nr || '');
+        const driver = colData.driver || '';
+        const time = parseTime(colData.time || '');
+        const gapRaw = colData.gap || '';
+        const gap = gapRaw ? gapRaw.replace(/\s+\d+$/, '') : '-';
+        if (driver && time) {
+          results.push({ position, kartNumber, driver, time, gap });
+        }
+      } else {
+        // Fallback: hardcoded X ranges for legacy compatibility
+        const getByX = (min, max) => coreItems.filter(it => it.x >= min && it.x < max).map(it => it.text).join(' ');
+        const position = parseInt(getByX(30, 60));
+        if (isNaN(position)) continue;
+        const kartNumber = parseInt(getByX(60, 100));
+        const driver = getByX(100, 160);
+        const time = parseTime(getByX(160, 210));
+        const gapRaw = getByX(210, 255);
+        const gap = gapRaw ? gapRaw.replace(/\s+\d+$/, '') : '-';
+        if (driver && time) {
+          results.push({ position, kartNumber, driver, time, gap });
+        }
       }
     }
 
@@ -1214,6 +1264,22 @@ function parseRace(rows) {
   const lapTimes = {};
   let mode = 'search';
   let driverColumns = [];
+  let colAnchors = null; // {pos, nr, driver, laps, gap, bestLap, speed, penalty} — X positions from header
+
+  // Build column boundaries from header anchors
+  function makeRanges(anchors) {
+    // Sort anchors by X, compute midpoints as boundaries
+    const keys = Object.keys(anchors);
+    const sorted = keys.sort((a, b) => anchors[a] - anchors[b]);
+    const ranges = {};
+    for (let i = 0; i < sorted.length; i++) {
+      const key = sorted[i];
+      const lo = i > 0 ? Math.floor((anchors[sorted[i - 1]] + anchors[key]) / 2) : anchors[key] - 20;
+      const hi = i < sorted.length - 1 ? Math.floor((anchors[key] + anchors[sorted[i + 1]]) / 2) : anchors[key] + 60;
+      ranges[key] = [lo, hi];
+    }
+    return ranges;
+  }
 
   for (let i = 0; i < rows.length; i++) {
     const texts = rows[i].texts;
@@ -1221,62 +1287,79 @@ function parseRace(rows) {
 
     if (mode === 'search') {
       if (joined.includes('Место') && joined.includes('Пилот') && (joined.includes('Круги') || joined.includes('Л.круг'))) {
+        // Extract column positions from header row
+        const headerMap = {};
+        for (const it of rows[i].items) {
+          const t = it.text;
+          if (t === 'Место') headerMap.pos = it.x;
+          else if (t === 'Nr.' || t === 'Nr') headerMap.nr = it.x;
+          else if (t === 'Пилот') headerMap.driver = it.x;
+          else if (t === 'Круги') headerMap.laps = it.x;
+          else if (t === 'Разрыв') headerMap.gap = it.x;
+          else if (t.includes('Л.круг') || t.includes('круг')) headerMap.bestLap = it.x;
+          else if (t.includes('км/час') || t.includes('км')) headerMap.speed = it.x;
+        }
+        if (headerMap.pos && headerMap.driver) {
+          colAnchors = headerMap;
+        }
         mode = 'standings';
         continue;
       }
     }
 
-    if (mode === 'standings' || mode === 'laps') {
+    if (mode === 'standings') {
       // Detect driver columns header (names for lap grid)
-      // The real header is a row of mostly Russian names, with no leading position number
-      // Standings rows start with a number at x~109-111, grid headers don't
       if (texts.length >= 4) {
-        const russianNames = texts.filter(t => /^[А-Яа-яA-Za-z][А-Яа-яA-Za-z]+$/.test(t));
+        const namePattern = /^[А-Яа-яA-Za-z][А-Яа-яa-z]+$/;
+        const russianNames = texts.filter(t => namePattern.test(t) && t.length > 2);
         const firstIsNumber = /^\d+$/.test(texts[0]);
         if (russianNames.length >= 4 && !firstIsNumber) {
-          // Only use items that are names (filter out any stray numbers)
-          driverColumns = rows[i].items.filter(it => /^[А-Яа-яA-Za-z]/.test(it.text)).map(it => ({ name: it.text, x: it.x }));
+          driverColumns = rows[i].items.filter(it => /^[А-Яа-яA-Za-z]/.test(it.text) && it.text.length > 2).map(it => ({ name: it.text, x: it.x }));
           mode = 'laps';
           continue;
         }
       }
-    }
 
-    if (mode === 'standings') {
       // Skip non-standings rows
       if (joined.includes('Лучшее время')) continue;
       if (joined.includes('Исключен')) continue;
+      if (joined.includes('DSQ')) continue;
 
-      // Use X-position-based parsing. Core columns end before x=430
-      const coreItems = rows[i].items.filter(it => it.x < 430);
+      // Adaptive X-position parsing using header anchors
+      // Exclude items from side tables (Лучшее время дня etc.)
+      const maxCoreX = colAnchors?.speed ? colAnchors.speed + 50 : 430;
+      const coreItems = rows[i].items.filter(it => it.x < maxCoreX);
       if (!coreItems.length) continue;
 
-      // Column ranges: Pos ~105-115, Nr ~130-140, Driver ~150-220, Laps ~218-225
-      // Gap ~240-295, BestLap ~295-340, Speed ~340-370, Penalty ~370-430
-      const getByX = (min, max) => coreItems.filter(it => it.x >= min && it.x < max).map(it => it.text).join(' ');
+      if (colAnchors) {
+        // Nearest-column matching: for each item, find nearest header column
+        const colData = {};
+        const colKeys = Object.keys(colAnchors);
+        for (const it of coreItems) {
+          let bestKey = null, bestDist = Infinity;
+          for (const k of colKeys) {
+            const d = Math.abs(it.x - colAnchors[k]);
+            if (d < bestDist) { bestDist = d; bestKey = k; }
+          }
+          if (bestKey && bestDist < 50) {
+            colData[bestKey] = (colData[bestKey] || '') + (colData[bestKey] ? ' ' : '') + it.text;
+          }
+        }
 
-      const posText = getByX(100, 128);
-      const nrText = getByX(128, 150);
-      const driverText = getByX(150, 218);
-      const lapsText = getByX(218, 240);
-      const gapText = getByX(240, 295);
-      const bestLapText = getByX(295, 340);
-      const speedText = getByX(340, 370);
-      const penaltyText = getByX(370, 430);
+        const position = parseInt(colData.pos || '');
+        if (isNaN(position)) continue;
 
-      const position = parseInt(posText);
-      if (isNaN(position)) continue;
+        const kartNumber = parseInt(colData.nr || '');
+        const driver = colData.driver || '';
+        const laps = parseInt(colData.laps || '');
+        const gap = colData.gap || '-';
+        const bestLap = parseTime(colData.bestLap || '');
+        const speed = parseFloat((colData.speed || '').replace(',', '.')) || null;
+        const penalty = colData.penalty || '';
 
-      const kartNumber = parseInt(nrText);
-      const driver = driverText;
-      const laps = parseInt(lapsText);
-      const gap = gapText || '-';
-      const bestLap = parseTime(bestLapText);
-      const speed = parseFloat(speedText.replace(',', '.')) || null;
-      const penalty = penaltyText || '';
-
-      if (driver && !isNaN(laps)) {
-        results.push({ position, kartNumber, driver, laps, gap, bestLap, speed, penalty });
+        if (driver && !isNaN(laps)) {
+          results.push({ position, kartNumber, driver, laps, gap, bestLap, speed, penalty });
+        }
       }
     }
 
