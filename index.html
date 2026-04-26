@@ -623,6 +623,60 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
 .score-below { color: #ff9800; }
 .score-poor { color: #e94560; }
 
+/* History filter input */
+.history-filter-input {
+  width: 100%;
+  background: var(--bg-card-alt);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.history-filter-input:focus { border-color: var(--accent-blue); }
+.history-filter-input::placeholder { color: var(--text-dim); }
+
+/* Driver visibility toggle pills */
+.driver-visibility-wrap {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.driver-visibility-wrap label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+.driver-visibility-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.driver-vis-btn {
+  padding: 4px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  font-size: 0.8rem;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+.driver-vis-btn:hover { border-color: var(--accent-blue); }
+.driver-vis-btn.excluded {
+  opacity: 0.32;
+  text-decoration: line-through;
+  border-style: dashed;
+  color: var(--text-dim);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .upload-grid { grid-template-columns: 1fr; }
@@ -665,6 +719,7 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
 
   <div class="history-section" id="historySection">
     <h2>Сохранённые результаты</h2>
+    <input type="text" class="history-filter-input" id="historyFilter" placeholder="&#128269; Поиск: дата, событие, пилот...">
     <div class="history-list" id="historyList"></div>
   </div>
 </div>
@@ -698,7 +753,7 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
         <span style="color:#4fc3f7">&#9679;</span> <strong>Лучший круг (20%)</strong> — отношение лучшего круга пилота к абсолютно лучшему кругу гонки<br>
         <span style="color:#ffd54f">&#9679;</span> <strong>Стабильность (25%)</strong> — обратное стандартное отклонение времени кругов (меньше разброс = выше балл)<br>
         <span style="color:#ff9800">&#9679;</span> <strong>Гоночное мастерство (15%)</strong> — позиции, отыгранные с квалификации до финиша (только при загрузке обоих файлов)<br>
-        <span style="color:#ab47bc">&#9679;</span> <strong>Управление шинами (10%)</strong> — разница среднего темпа начала и конца гонки (меньше деградация = выше балл)
+        <span style="color:#ab47bc">&#9679;</span> <strong>Управление шинами (10%)</strong> — разница среднего темпа начала и конца гонки (меньше деградация = выше балл). Серии из 3+ кругов, где темп на &gt;3% хуже референса пилота, считаются трафиком и исключаются из расчёта
       </div>
       <div class="driver-ratings-grid" id="driverRatingsGrid"></div>
     </div>
@@ -776,6 +831,10 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
         Рейтинг рассчитывается как среднее значение по всем сохранённым гонкам, в которых участвовал пилот.
         Чем больше гонок — тем точнее оценка.
       </p>
+      <div class="driver-visibility-wrap" id="overallVisWrap" style="display:none">
+        <label>Нажмите на пилота, чтобы скрыть его из сводного рейтинга:</label>
+        <div class="driver-visibility-grid" id="overallDriverToggles"></div>
+      </div>
       <div class="table-wrap" id="overallRatingTable"></div>
     </div>
     <div class="card">
@@ -818,6 +877,14 @@ let raceFile = null;
 let parsedData = { qualification: null, race: null, qualiLaps: null, raceLaps: null, meta: {} };
 const charts = {};
 const STORAGE_KEY = 'kartAnalyzerHistory';
+const HIDDEN_DRIVERS_KEY = 'kartAnalyzerHiddenDrivers';
+
+function getHiddenDrivers() {
+  try { return new Set(JSON.parse(localStorage.getItem(HIDDEN_DRIVERS_KEY) || '[]')); } catch { return new Set(); }
+}
+function saveHiddenDrivers(set) {
+  localStorage.setItem(HIDDEN_DRIVERS_KEY, JSON.stringify([...set]));
+}
 
 // ===== History (Firebase + localStorage fallback) =====
 let historyCache = [];
@@ -972,6 +1039,16 @@ async function renderHistory() {
       await renderHistory();
     });
   });
+
+  // Wire up filter input
+  const filterInput = document.getElementById('historyFilter');
+  filterInput.value = '';
+  filterInput.oninput = function() {
+    const q = this.value.trim().toLowerCase();
+    list.querySelectorAll('.history-item').forEach(item => {
+      item.style.display = !q || item.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  };
 }
 
 function showApp() {
@@ -1406,6 +1483,51 @@ function getCleanLaps(laps) {
   return validLaps.filter(t => !isOutlierLap(t, med));
 }
 
+// Detect suspected traffic laps: runs of 3+ consecutive laps that are
+// significantly slower than the driver's own reference pace (best third of laps).
+// Returns Set of lap indices (0-based) that are suspected traffic.
+function detectTrafficLaps(laps) {
+  // Build indexed valid laps (skip first 2 — always slow due to start/formation)
+  const validLaps = laps
+    .map((t, i) => ({ time: t, idx: i }))
+    .filter(l => l.time != null && l.time > 0 && l.idx >= 2);
+
+  if (validLaps.length < 5) return new Set();
+
+  // Reference pace: mean of best third (fastest laps = free-air pace)
+  const sortedTimes = [...validLaps].sort((a, b) => a.time - b.time);
+  const refCount = Math.max(3, Math.ceil(sortedTimes.length / 3));
+  const refPace = sortedTimes.slice(0, refCount).reduce((s, l) => s + l.time, 0) / refCount;
+
+  // Traffic threshold: 3% slower than reference pace
+  // (in ~34s karting: ~1 second, consistent with being stuck in dirty air)
+  const threshold = refPace * 1.03;
+
+  // Find runs of 3+ consecutive slow laps
+  const trafficIdx = new Set();
+  let run = [];
+  for (const lap of validLaps) {
+    if (lap.time > threshold && !isOutlierLap(lap.time, median(validLaps.map(l => l.time)))) {
+      // Slow but not a crash/pit — candidate for traffic
+      run.push(lap.idx);
+    } else {
+      if (run.length >= 3) run.forEach(idx => trafficIdx.add(idx));
+      run = [];
+    }
+  }
+  if (run.length >= 3) run.forEach(idx => trafficIdx.add(idx));
+
+  return trafficIdx;
+}
+
+// Returns traffic stats: { trafficIdx: Set, trafficPct: number }
+function getTrafficStats(laps) {
+  const trafficIdx = detectTrafficLaps(laps);
+  const totalValid = laps.filter(t => t != null && t > 0).length;
+  const trafficPct = totalValid > 0 ? Math.round((trafficIdx.size / totalValid) * 100) : 0;
+  return { trafficIdx, trafficPct };
+}
+
 function computePaceAnalysis(lapTimes) {
   const analysis = [];
   for (const [driver, laps] of Object.entries(lapTimes)) {
@@ -1441,24 +1563,28 @@ function computeDegradation(lapTimes) {
     const clean = getCleanLaps(laps);
     if (clean.length < 9) continue;
 
-    // Split into thirds based on original lap positions (not cleaned)
-    const validLaps = laps.map((t, i) => ({ time: t, lap: i + 1 })).filter(l => l.time != null && l.time > 0);
+    const { trafficIdx, trafficPct } = getTrafficStats(laps);
+
+    // Build indexed laps, excluding outliers AND traffic laps
+    const validLaps = laps.map((t, i) => ({ time: t, lap: i + 1, idx: i })).filter(l => l.time != null && l.time > 0);
     const med = median(validLaps.map(l => l.time));
-    const cleanIndexed = validLaps.filter(l => !isOutlierLap(l.time, med));
+    // Exclude crash/pit outliers AND suspected traffic laps
+    const cleanIndexed = validLaps.filter(l => !isOutlierLap(l.time, med) && !trafficIdx.has(l.idx));
+
+    if (cleanIndexed.length < 6) continue; // not enough clean laps after traffic removal
 
     const third = Math.floor(cleanIndexed.length / 3);
     const early = cleanIndexed.slice(0, third).map(l => l.time);
-    const mid = cleanIndexed.slice(third, third * 2).map(l => l.time);
-    const late = cleanIndexed.slice(third * 2).map(l => l.time);
+    const mid   = cleanIndexed.slice(third, third * 2).map(l => l.time);
+    const late  = cleanIndexed.slice(third * 2).map(l => l.time);
 
     const avgEarly = early.reduce((a, b) => a + b, 0) / early.length;
-    const avgMid = mid.reduce((a, b) => a + b, 0) / mid.length;
-    const avgLate = late.reduce((a, b) => a + b, 0) / late.length;
+    const avgMid   = mid.reduce((a, b) => a + b, 0) / mid.length;
+    const avgLate  = late.reduce((a, b) => a + b, 0) / late.length;
     const degradation = avgLate - avgEarly;
-    // Percentage-based degradation relative to driver's own early pace
     const degradationPct = (avgLate - avgEarly) / avgEarly * 100;
 
-    result.push({ driver, avgEarly, avgMid, avgLate, degradation, degradationPct });
+    result.push({ driver, avgEarly, avgMid, avgLate, degradation, degradationPct, trafficPct, trafficLaps: trafficIdx.size });
   }
   result.sort((a, b) => a.degradation - b.degradation);
   return result;
@@ -1561,6 +1687,9 @@ function computeRatingsFromData(lapData, raceResults, qualiResults) {
       degradationScore * weights.degradation
     );
 
+    // Traffic stats for this driver
+    const { trafficPct } = getTrafficStats(lapData[driverName] || []);
+
     return {
       driver: driverName,
       position: r.position,
@@ -1570,6 +1699,7 @@ function computeRatingsFromData(lapData, raceResults, qualiResults) {
       consistencyScore: Math.round(consistencyScore),
       raceCraftScore: Math.round(raceCraftScore),
       degradationScore: Math.round(degradationScore),
+      trafficPct,
       hasQuali,
     };
   });
@@ -1677,6 +1807,12 @@ function renderRatingCard(r, showRacesInfo = false) {
     ? `P${r.position} ${r.driver}`
     : r.driver;
 
+  const trafficHtml = r.trafficPct != null && r.trafficPct > 0
+    ? `<div style="font-size:0.75rem;color:var(--accent-yellow);margin-bottom:6px">
+        &#9888; ${r.trafficPct}% кругов в трафике — деградация рассчитана без них
+       </div>`
+    : '';
+
   const extra = showRacesInfo && r.racesCount
     ? `<div style="font-size:0.75rem;color:var(--text-dim);margin-top:4px">
         Гонок: ${r.racesCount} &middot; Лучший: ${r.bestTotal} &middot; Худший: ${r.worstTotal}
@@ -1689,6 +1825,7 @@ function renderRatingCard(r, showRacesInfo = false) {
       <span class="drc-score ${r.scoreClass}">${r.total}</span>
     </div>
     ${extra}
+    ${trafficHtml}
     ${barsHtml}
     <div class="drc-verdict">${r.verdict}</div>
   </div>`;
@@ -1707,13 +1844,51 @@ function renderDriverRatings() {
 async function renderOverallRatings() {
   const table = document.getElementById('overallRatingTable');
   const cards = document.getElementById('overallRatingCards');
+  const visWrap = document.getElementById('overallVisWrap');
+  const togglesEl = document.getElementById('overallDriverToggles');
 
   table.innerHTML = '<div class="loading-inline">Расчёт сводного рейтинга...</div>';
   cards.innerHTML = '';
 
-  const ratings = await computeOverallRatings();
-  if (!ratings.length) {
+  const allRatings = await computeOverallRatings();
+  if (!allRatings.length) {
     table.innerHTML = '<p style="color:var(--text-dim)">Нет сохранённых гонок для расчёта сводного рейтинга</p>';
+    visWrap.style.display = 'none';
+    return;
+  }
+
+  // Build toggle pills for all drivers
+  const hidden = getHiddenDrivers();
+  const allDriverNames = allRatings.map(r => r.driver);
+
+  visWrap.style.display = '';
+  togglesEl.innerHTML = allDriverNames.map(name =>
+    `<button class="driver-vis-btn${hidden.has(name) ? ' excluded' : ''}" data-driver="${name}">${name}</button>`
+  ).join('');
+
+  togglesEl.querySelectorAll('.driver-vis-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const d = btn.dataset.driver;
+      const h = getHiddenDrivers();
+      if (h.has(d)) h.delete(d); else h.add(d);
+      saveHiddenDrivers(h);
+      btn.classList.toggle('excluded', h.has(d));
+      redrawOverallTable(allRatings);
+    });
+  });
+
+  redrawOverallTable(allRatings);
+}
+
+function redrawOverallTable(allRatings) {
+  const table = document.getElementById('overallRatingTable');
+  const cards = document.getElementById('overallRatingCards');
+  const hidden = getHiddenDrivers();
+  const ratings = allRatings.filter(r => !hidden.has(r.driver));
+
+  if (!ratings.length) {
+    table.innerHTML = '<p style="color:var(--text-dim)">Все пилоты скрыты. Нажмите на имя, чтобы показать.</p>';
+    cards.innerHTML = '';
     return;
   }
 
@@ -2179,12 +2354,14 @@ function renderHeatmap(lapData) {
     headerHtml += `<th>${from}-${to}</th>`;
   }
 
-  // Compute block averages
+  // Compute block averages, tracking traffic blocks
   const allAvgs = [];
   const driverData = drivers.map(driver => {
     const laps = lapData[driver];
     const med = median(laps.filter(t => t != null && t > 0));
+    const { trafficIdx } = getTrafficStats(laps);
     const avgs = [];
+    const isTrafficBlock = [];
     for (let b = 0; b < blocks; b++) {
       const start = b * blockSize;
       const end = Math.min(start + blockSize, laps.length);
@@ -2192,8 +2369,13 @@ function renderHeatmap(lapData) {
       const avg = blockLaps.length ? blockLaps.reduce((a, c) => a + c, 0) / blockLaps.length : null;
       avgs.push(avg);
       if (avg != null) allAvgs.push(avg);
+      // Mark block as traffic if majority of its valid laps are traffic laps
+      const blockIndices = Array.from({ length: end - start }, (_, i) => start + i);
+      const blockValidCount = laps.slice(start, end).filter(t => t != null && t > 0).length;
+      const blockTrafficCount = blockIndices.filter(idx => trafficIdx.has(idx)).length;
+      isTrafficBlock.push(blockValidCount > 0 && blockTrafficCount / blockValidCount >= 0.5);
     }
-    return { driver, avgs };
+    return { driver, avgs, isTrafficBlock };
   });
 
   const minAvg = Math.min(...allAvgs);
@@ -2210,7 +2392,12 @@ function renderHeatmap(lapData) {
   }
 
   const bodyHtml = driverData.map(d => {
-    const cells = d.avgs.map(avg => `<td style="background:${heatColor(avg)};text-align:center;font-size:0.8rem">${avg != null ? formatTime(avg) : '-'}</td>`).join('');
+    const cells = d.avgs.map((avg, b) => {
+      const trafficStyle = d.isTrafficBlock[b]
+        ? 'outline:2px solid var(--accent-yellow);outline-offset:-2px;opacity:0.65;'
+        : '';
+      return `<td style="background:${heatColor(avg)};${trafficStyle}text-align:center;font-size:0.8rem" title="${d.isTrafficBlock[b] ? '⚠ трафик' : ''}">${avg != null ? formatTime(avg) : '-'}</td>`;
+    }).join('');
     return `<tr><td>${d.driver}</td>${cells}</tr>`;
   }).join('');
 
