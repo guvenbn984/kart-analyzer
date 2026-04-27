@@ -4,51 +4,56 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kart Race Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.min.mjs" type="module"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <link rel="stylesheet" href="colors_and_type.css">
 <style>
 :root {
-  --bg: #0f0f1a;
-  --bg-card: #1a1a2e;
-  --bg-card-alt: #16213e;
-  --text: #e0e0e0;
-  --text-dim: #8892a4;
+  --bg: #0c0c14;
+  --bg-card: #18182a;
+  --bg-card-alt: #13131f;
+  --text: #d8dce8;
+  --text-dim: #6b7491;
   --accent: #e94560;
   --accent-green: #4caf50;
   --accent-blue: #4fc3f7;
   --accent-yellow: #ffd54f;
   --accent-orange: #ff9800;
-  --border: #2a2a4a;
-  --radius: 10px;
-  --shadow: 0 4px 20px rgba(0,0,0,0.4);
+  --border: rgba(255,255,255,0.07);
+  --radius: 14px;
+  --shadow: 0 4px 20px rgba(0,0,0,0.5);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: 'DM Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
   line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Header */
 .header {
-  background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-alt) 100%);
+  background: var(--bg-card-alt);
   border-bottom: 1px solid var(--border);
-  padding: 20px 30px;
+  padding: 0 28px;
+  height: 56px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
   gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .header h1 {
-  font-size: 1.6rem;
-  font-weight: 700;
+  font-size: 17px;
+  font-weight: 800;
   background: linear-gradient(135deg, var(--accent) 0%, var(--accent-orange) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -57,7 +62,7 @@ body {
 
 .header-info {
   color: var(--text-dim);
-  font-size: 0.85rem;
+  font-size: 12px;
 }
 
 /* Upload Section */
@@ -76,23 +81,24 @@ body {
 
 .upload-zone {
   background: var(--bg-card);
-  border: 2px dashed var(--border);
+  border: 1.5px dashed var(--border);
   border-radius: var(--radius);
-  padding: 30px 20px;
+  padding: 28px 20px;
   text-align: center;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.2s;
   position: relative;
 }
 
 .upload-zone:hover, .upload-zone.dragover {
   border-color: var(--accent);
-  background: rgba(233, 69, 96, 0.05);
+  background: rgba(233, 69, 96, 0.04);
 }
 
 .upload-zone.loaded {
   border-color: var(--accent-green);
   border-style: solid;
+  background: rgba(76, 175, 80, 0.04);
 }
 
 .upload-zone input[type="file"] {
@@ -128,25 +134,27 @@ body {
 .btn-analyze {
   display: block;
   margin: 0 auto;
-  padding: 14px 40px;
+  padding: 13px 36px;
   background: linear-gradient(135deg, var(--accent) 0%, #c0392b 100%);
   color: white;
   border: none;
-  border-radius: var(--radius);
-  font-size: 1.1rem;
+  border-radius: 10px;
+  font-size: 15px;
   font-weight: 600;
+  font-family: inherit;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  box-shadow: var(--shadow);
+  transition: all 0.15s;
+  box-shadow: 0 4px 16px rgba(233,69,96,0.2);
 }
 
 .btn-analyze:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 25px rgba(233, 69, 96, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 28px rgba(233, 69, 96, 0.35);
+  background: linear-gradient(135deg, #f05470 0%, #d03520 100%);
 }
 
 .btn-analyze:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
@@ -174,18 +182,21 @@ body {
   background: transparent;
   color: var(--text-dim);
   border: none;
-  border-bottom: 3px solid transparent;
-  font-size: 0.9rem;
-  font-weight: 500;
+  border-bottom: 2px solid transparent;
+  font-size: 13px;
+  font-weight: 400;
+  font-family: inherit;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.2s;
+  transition: all 0.15s;
+  margin-bottom: -1px;
 }
 
 .tab-btn:hover { color: var(--text); }
 
 .tab-btn.active {
-  color: var(--accent);
+  color: var(--text);
+  font-weight: 600;
   border-bottom-color: var(--accent);
 }
 
@@ -198,42 +209,45 @@ body {
   border-radius: var(--radius);
   padding: 20px;
   margin-bottom: 20px;
-  box-shadow: var(--shadow);
   border: 1px solid var(--border);
 }
 
 .card h3 {
-  font-size: 1.1rem;
+  font-size: 13px;
+  font-weight: 600;
   margin-bottom: 16px;
   color: var(--accent-blue);
+  letter-spacing: 0.01em;
 }
 
 /* Summary Row */
 .summary-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
   margin-bottom: 24px;
 }
 
 .summary-card {
-  background: var(--bg-card);
-  border-radius: var(--radius);
-  padding: 16px;
-  text-align: center;
+  background: var(--bg-card-alt);
+  border-radius: 12px;
+  padding: 14px 18px;
   border: 1px solid var(--border);
 }
 
 .summary-card .value {
-  font-size: 1.8rem;
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 800;
   color: var(--accent);
+  line-height: 1.1;
 }
 
 .summary-card .label {
-  font-size: 0.8rem;
+  font-size: 11px;
   color: var(--text-dim);
-  margin-top: 4px;
+  margin-top: 5px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 /* Tables */
@@ -244,39 +258,56 @@ body {
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: 13px;
 }
 
 thead th {
   background: var(--bg-card-alt);
-  padding: 10px 12px;
+  padding: 10px 14px;
   text-align: left;
   font-weight: 600;
-  color: var(--accent-blue);
+  font-size: 11px;
+  color: #3e4a6a;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   position: sticky;
-  top: 0;
+  top: 56px;
   white-space: nowrap;
-  border-bottom: 2px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 
 tbody td {
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
+  padding: 11px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
   white-space: nowrap;
+  vertical-align: middle;
 }
 
-tbody tr:nth-child(even) { background: rgba(255,255,255,0.02); }
-tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
+tbody tr:nth-child(even) { background: rgba(255,255,255,0.01); }
+tbody tr:hover { background: rgba(79, 195, 247, 0.04); }
 
-.pos-up { color: var(--accent-green); font-weight: 600; }
-.pos-down { color: var(--accent); font-weight: 600; }
-.pos-same { color: var(--text-dim); }
+/* Position delta pills */
+.pos-up {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 700;
+  background: rgba(76,175,80,0.12); color: #4caf50;
+}
+.pos-down {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 700;
+  background: rgba(233,69,96,0.12); color: #e94560;
+}
+.pos-same {
+  display: inline-flex; align-items: center;
+  padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 700;
+  background: rgba(107,116,145,0.10); color: #4a506a;
+}
 .best-val { color: var(--accent-green); font-weight: 600; }
 .worst-val { color: var(--accent); }
 
-.podium-1 td:first-child { border-left: 3px solid gold; }
-.podium-2 td:first-child { border-left: 3px solid silver; }
-.podium-3 td:first-child { border-left: 3px solid #cd7f32; }
+.podium-1 td:first-child { box-shadow: inset 3px 0 0 gold; }
+.podium-2 td:first-child { box-shadow: inset 3px 0 0 silver; }
+.podium-3 td:first-child { box-shadow: inset 3px 0 0 #cd7f32; }
 
 /* Driver checkboxes */
 .driver-checkboxes {
@@ -291,12 +322,12 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
   align-items: center;
   gap: 5px;
   padding: 4px 10px;
-  background: var(--bg-card-alt);
+  background: rgba(255,255,255,0.03);
   border: 1px solid var(--border);
-  border-radius: 16px;
-  font-size: 0.8rem;
+  border-radius: 99px;
+  font-size: 12px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
   user-select: none;
 }
 
@@ -370,28 +401,32 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.tab-panel.active { animation: fadein 0.2s ease; }
 
 /* Error */
 .error-msg {
-  background: rgba(233, 69, 96, 0.1);
-  border: 1px solid var(--accent);
-  border-radius: var(--radius);
+  background: rgba(233, 69, 96, 0.08);
+  border: 1px solid rgba(233, 69, 96, 0.3);
+  border-radius: 10px;
   padding: 16px;
   color: var(--accent);
   margin: 16px 0;
+  font-size: 13px;
 }
 
 /* Race event info bar */
 .event-info {
   display: flex;
-  gap: 24px;
+  gap: 20px;
   flex-wrap: wrap;
   margin-bottom: 20px;
-  padding: 12px 16px;
+  padding: 10px 16px;
   background: var(--bg-card-alt);
-  border-radius: var(--radius);
+  border-radius: 10px;
   border: 1px solid var(--border);
-  font-size: 0.85rem;
+  font-size: 12px;
 }
 
 .event-info span { color: var(--text-dim); }
@@ -415,10 +450,14 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
   background: var(--bg-card-alt);
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 6px 10px;
-  font-size: 0.85rem;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
 }
+.controls select:focus, .controls input[type="number"]:focus { border-color: rgba(79,195,247,0.35); }
 
 .controls input[type="checkbox"] {
   accent-color: var(--accent);
@@ -432,11 +471,13 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
 }
 
 .history-section h2 {
-  font-size: 1.1rem;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--text-dim);
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   border-bottom: 1px solid var(--border);
   padding-bottom: 8px;
+  letter-spacing: 0.01em;
 }
 
 .history-list {
@@ -449,17 +490,17 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
   display: flex;
   align-items: center;
   gap: 12px;
-  background: var(--bg-card);
+  background: var(--bg-card-alt);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 12px;
   padding: 12px 16px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
 }
 
 .history-item:hover {
-  border-color: var(--accent-blue);
-  background: var(--bg-card-alt);
+  border-color: rgba(79,195,247,0.2);
+  background: var(--bg-card);
 }
 
 .history-item .hi-icon {
@@ -502,22 +543,22 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
 
 /* Status badges */
 .cloud-badge, .local-badge {
-  font-size: 0.7rem;
+  font-size: 11px;
   padding: 2px 8px;
-  border-radius: 10px;
+  border-radius: 99px;
   vertical-align: middle;
   margin-left: 8px;
-  font-weight: 400;
+  font-weight: 500;
 }
 .cloud-badge {
-  background: rgba(79, 195, 247, 0.15);
+  background: rgba(79, 195, 247, 0.1);
   color: var(--accent-blue);
-  border: 1px solid rgba(79, 195, 247, 0.3);
+  border: 1px solid rgba(79, 195, 247, 0.2);
 }
 .local-badge {
-  background: rgba(255, 213, 79, 0.15);
+  background: rgba(255, 213, 79, 0.1);
   color: var(--accent-yellow);
-  border: 1px solid rgba(255, 213, 79, 0.3);
+  border: 1px solid rgba(255, 213, 79, 0.2);
 }
 .loading-inline {
   color: var(--text-dim);
@@ -527,17 +568,22 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
 
 /* Back button */
 .btn-back {
-  padding: 6px 16px;
+  padding: 5px 14px;
   background: transparent;
   color: var(--text-dim);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 0.85rem;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
 }
 
-.btn-back:hover { color: var(--text); border-color: var(--accent-blue); }
+.btn-back:hover {
+  color: var(--text);
+  border-color: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+}
 
 /* Driver Rating Cards */
 .driver-ratings-grid {
@@ -550,9 +596,10 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
   background: var(--bg-card-alt);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 14px 16px;
+  padding: 18px 20px;
   position: relative;
   overflow: hidden;
+  /* border-top stripe applied inline via JS */
 }
 
 .driver-rating-card .drc-header {
@@ -564,14 +611,16 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
 
 .driver-rating-card .drc-name {
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 14px;
+  color: var(--text);
 }
 
 .driver-rating-card .drc-score {
-  font-size: 1.6rem;
+  font-size: 28px;
   font-weight: 800;
   min-width: 52px;
-  text-align: center;
+  text-align: right;
+  line-height: 1;
 }
 
 .driver-rating-card .drc-bar-row {
@@ -590,16 +639,17 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
 
 .driver-rating-card .drc-bar {
   flex: 1;
-  height: 8px;
-  background: rgba(255,255,255,0.06);
-  border-radius: 4px;
+  height: 4px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 99px;
   overflow: hidden;
 }
 
 .driver-rating-card .drc-bar-fill {
   height: 100%;
-  border-radius: 4px;
+  border-radius: 99px;
   transition: width 0.5s ease;
+  opacity: 0.9;
 }
 
 .driver-rating-card .drc-bar-val {
@@ -628,12 +678,12 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
 .session-config {
   margin: 16px 0;
   padding: 14px 18px;
-  background: var(--bg-card);
+  background: var(--bg-card-alt);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 12px;
   display: flex;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: 28px;
   align-items: center;
 }
 .sc-group {
@@ -643,7 +693,7 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
   flex-wrap: wrap;
 }
 .sc-label {
-  font-size: 0.85rem;
+  font-size: 13px;
   color: var(--text-dim);
   white-space: nowrap;
 }
@@ -653,17 +703,18 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
 }
 .sc-btn {
   padding: 5px 14px;
-  background: var(--bg-card-alt);
+  background: rgba(255,255,255,0.03);
   color: var(--text-dim);
   border: 1px solid var(--border);
-  border-radius: 20px;
-  font-size: 0.85rem;
+  border-radius: 99px;
+  font-size: 13px;
   font-weight: 600;
+  font-family: inherit;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
   user-select: none;
 }
-.sc-btn:hover { border-color: var(--accent-blue); color: var(--text); }
+.sc-btn:hover { border-color: rgba(255,255,255,0.1); color: var(--text); background: rgba(255,255,255,0.06); }
 .sc-btn.active {
   background: var(--accent);
   color: #fff;
@@ -676,14 +727,15 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
   background: var(--bg-card-alt);
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 0.85rem;
-  margin-bottom: 12px;
+  border-radius: 10px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-family: inherit;
+  margin-bottom: 10px;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.15s;
 }
-.history-filter-input:focus { border-color: var(--accent-blue); }
+.history-filter-input:focus { border-color: rgba(79,195,247,0.35); }
 .history-filter-input::placeholder { color: var(--text-dim); }
 
 /* Driver visibility toggle pills */
@@ -1891,10 +1943,19 @@ function renderRatingCard(r, showRacesInfo = false) {
        </div>`
     : '';
 
-  return `<div class="driver-rating-card">
+  const scoreColor = r.scoreClass === 'score-excellent' ? '#4caf50'
+    : r.scoreClass === 'score-good' ? '#8bc34a'
+    : r.scoreClass === 'score-average' ? '#ffd54f'
+    : r.scoreClass === 'score-below' ? '#ff9800'
+    : '#e94560';
+
+  return `<div class="driver-rating-card" style="border-top: 2.5px solid ${scoreColor}">
     <div class="drc-header">
       <span class="drc-name">${header}</span>
-      <span class="drc-score ${r.scoreClass}">${r.total}</span>
+      <div style="text-align:right">
+        <span class="drc-score ${r.scoreClass}">${r.total}</span>
+        <div style="font-size:10px;font-weight:600;color:${scoreColor};letter-spacing:0.04em;margin-top:2px">${r.scoreClass === 'score-excellent' ? 'ОТЛИЧНО' : r.scoreClass === 'score-good' ? 'ХОРОШО' : r.scoreClass === 'score-average' ? 'СРЕДНЕ' : r.scoreClass === 'score-below' ? 'НИЖЕ СР.' : 'СЛАБО'}</div>
+      </div>
     </div>
     ${extra}
     ${trafficHtml}
@@ -2064,7 +2125,7 @@ function renderStandings() {
       const qp = qualiMap[r.kartNumber];
       const posChange = qp ? qp.position - r.position : null;
       const changeClass = posChange > 0 ? 'pos-up' : posChange < 0 ? 'pos-down' : 'pos-same';
-      const changeText = posChange > 0 ? `+${posChange}` : posChange === 0 ? '=' : posChange != null ? `${posChange}` : '-';
+      const changeText = posChange > 0 ? `↑ +${posChange}` : posChange === 0 ? '— 0' : posChange != null ? `↓ ${posChange}` : '-';
       return `<tr class="${i < 3 ? 'podium-' + (i + 1) : ''}">
         <td><strong>${r.position}</strong></td><td>${r.kartNumber}</td><td>${r.driver}</td>
         <td>${r.laps}</td><td>${r.gap}</td>
