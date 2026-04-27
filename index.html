@@ -7,6 +7,8 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.min.mjs" type="module"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link rel="stylesheet" href="colors_and_type.css">
 <style>
 :root {
@@ -267,14 +269,20 @@ thead th {
   text-align: left;
   font-weight: 600;
   font-size: 11px;
-  color: #3e4a6a;
-  letter-spacing: 0.08em;
+  color: #5a6a90;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  position: sticky;
-  top: 56px;
   white-space: nowrap;
   border-bottom: 1px solid var(--border);
 }
+
+thead th.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s;
+}
+thead th.sortable:hover { color: #8898c0; }
+thead th.sort-active { color: var(--accent-blue); }
 
 tbody td {
   padding: 11px 14px;
@@ -585,6 +593,24 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.04); }
   background: rgba(255,255,255,0.04);
 }
 
+.btn-export-pdf {
+  padding: 5px 14px;
+  background: rgba(76,175,80,0.1);
+  color: var(--accent-green);
+  border: 1px solid rgba(76,175,80,0.25);
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-export-pdf:hover:not(:disabled) {
+  background: rgba(76,175,80,0.18);
+  border-color: rgba(76,175,80,0.45);
+}
+.btn-export-pdf:disabled { opacity: 0.5; cursor: not-allowed; }
+
 /* Driver Rating Cards */
 .driver-ratings-grid {
   display: grid;
@@ -791,8 +817,9 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.04); }
 
 <div class="header">
   <h1>Kart Race Analyzer</h1>
-  <div style="display:flex;align-items:center;gap:12px">
+  <div style="display:flex;align-items:center;gap:10px">
     <button class="btn-back" id="btnBack" style="display:none">&#8592; Назад</button>
+    <button class="btn-export-pdf" id="btnExportPDF" style="display:none">&#11015; PDF</button>
     <div class="header-info" id="headerInfo"></div>
   </div>
 </div>
@@ -1179,19 +1206,90 @@ function showApp() {
   document.getElementById('uploadSection').style.display = 'none';
   document.getElementById('app').classList.remove('hidden');
   document.getElementById('btnBack').style.display = '';
+  document.getElementById('btnExportPDF').style.display = '';
   renderAll();
+}
+
+async function exportRacePDF() {
+  const btn = document.getElementById('btnExportPDF');
+  const origText = btn.innerHTML;
+  btn.innerHTML = '&#9203; Генерация...';
+  btn.disabled = true;
+
+  // Temporarily make all tab panels visible for full capture
+  const panels = document.querySelectorAll('.tab-panel');
+  const restored = [];
+  panels.forEach(p => {
+    if (!p.classList.contains('active')) {
+      p.style.display = 'block';
+      restored.push(p);
+    }
+  });
+
+  try {
+    // Brief pause so any lazy-rendered content can paint
+    await new Promise(r => setTimeout(r, 150));
+
+    const appEl = document.getElementById('app');
+    const canvas = await html2canvas(appEl, {
+      backgroundColor: '#0c0c14',
+      scale: 1.5,
+      useCORS: true,
+      logging: false,
+      allowTaint: true,
+    });
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const imgRatio = canvas.height / canvas.width;
+    const fullH = pageW * imgRatio;
+
+    // Split across pages
+    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+    let y = 0;
+    while (y < fullH) {
+      if (y > 0) pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, -y, pageW, fullH);
+      y += pageH;
+    }
+
+    const ev = (parsedData?.meta?.event || 'Race').replace(/[\\/:*?"<>|]/g, '_');
+    const dt = parsedData?.meta?.date ? parsedData.meta.date.replace(/\./g, '-') : new Date().toISOString().slice(0, 10);
+    pdf.save(`KartRace_${ev}_${dt}.pdf`);
+  } catch (err) {
+    console.error('PDF export error:', err);
+    alert('Ошибка генерации PDF: ' + err.message);
+  } finally {
+    restored.forEach(p => { p.style.display = ''; });
+    btn.innerHTML = origText;
+    btn.disabled = false;
+  }
 }
 
 async function showUpload() {
   document.getElementById('uploadSection').style.display = '';
   document.getElementById('app').classList.add('hidden');
   document.getElementById('btnBack').style.display = 'none';
+  document.getElementById('btnExportPDF').style.display = 'none';
   // Destroy all charts
   for (const [key, c] of Object.entries(charts)) {
     if (c && c.destroy) c.destroy();
     delete charts[key];
   }
   await renderHistory();
+}
+
+// ===== Table sort state =====
+let _kartsSort  = { col: 'rating', dir: -1 }; // best rating first by default
+let _stintsSort = { col: null,     dir:  1 };
+
+function sortThHtml(label, col, sortState, prefix) {
+  const active = sortState.col === col;
+  const arrow  = active ? (sortState.dir === 1 ? '↑' : '↓') : '↕';
+  return `<th class="sortable${active ? ' sort-active' : ''}" data-sort="${prefix}:${col}">`
+       + `${label} <span style="font-size:9px;opacity:${active ? 1 : 0.3}">${arrow}</span></th>`;
 }
 
 // ===== Driver Colors =====
@@ -2827,16 +2925,37 @@ function renderKartsTab() {
 </div>`;
 
   // ── 2. Dynamic stint table (columns adapt to numStops) ──
-  let headerCols = '<th>Пилот</th>';
+  let headerCols = sortThHtml('Пилот', 'driver', _stintsSort, 'stints');
   for (let s = 0; s < numStints; s++) {
     const col = STINT_COLORS[s] || 'var(--text)';
     headerCols += `<th style="color:${col}">Карт С${s + 1}</th>`;
-    if (s < numStops) headerCols += `<th>Пит ${s + 1}</th>`;
-    headerCols += `<th>Кр.</th><th>Темп</th><th>Дег.</th>`;
+    if (s < numStops) headerCols += sortThHtml(`Пит ${s + 1}`, `pit${s}`, _stintsSort, 'stints');
+    headerCols += `<th>Кр.</th>`;
+    headerCols += sortThHtml('Темп', `avg${s}`, _stintsSort, 'stints');
+    headerCols += `<th>Дег.</th>`;
   }
-  if (numStops > 0) headerCols += '<th>Δ С1→Сn</th>';
+  if (numStops > 0) headerCols += sortThHtml('Δ С1→Сn', 'delta', _stintsSort, 'stints');
 
-  const stintRows = driverStints.map(ds => {
+  // Sort driver stints
+  const sortedStints = [...driverStints].sort((a, b) => {
+    const { col, dir } = _stintsSort;
+    if (!col) return 0;
+    if (col === 'driver') return a.driver.localeCompare(b.driver) * dir;
+    const pitMatch = col.match(/^pit(\d+)$/);
+    if (pitMatch) {
+      const i = +pitMatch[1];
+      return ((a.pitLaps[i]?.lapNum ?? 9999) - (b.pitLaps[i]?.lapNum ?? 9999)) * dir;
+    }
+    const avgMatch = col.match(/^avg(\d+)$/);
+    if (avgMatch) {
+      const i = +avgMatch[1];
+      return ((a.stintAvgs[i] ?? 9999) - (b.stintAvgs[i] ?? 9999)) * dir;
+    }
+    if (col === 'delta') return ((a.deltaTotal ?? 9999) - (b.deltaTotal ?? 9999)) * dir;
+    return 0;
+  });
+
+  const stintRows = sortedStints.map(ds => {
     let cells = `<td><strong>${ds.driver}</strong></td>`;
     for (let s = 0; s < numStints; s++) {
       const col = STINT_COLORS[s] || 'var(--text)';
@@ -2891,45 +3010,76 @@ function renderKartsTab() {
     const bestKA = allKartAvgs.length ? Math.min(...allKartAvgs) : 1;
     const worstKA = allKartAvgs.length ? Math.max(...allKartAvgs) : 2;
 
-    const kartRows = Object.entries(kartMap)
-      .sort(([, aS], [, bS]) => (stintAvg(aS.map(s => s.avg).filter(Boolean)) || 999) - (stintAvg(bS.map(s => s.avg).filter(Boolean)) || 999))
-      .map(([kNr, stints]) => {
-        const avgs = stints.map(s => s.avg).filter(Boolean);
-        const totalAvg = stintAvg(avgs);
-        const bestLap  = Math.min(...stints.map(s => s.best).filter(v => v != null && isFinite(v)));
-        const degs     = stints.map(s => s.deg).filter(v => v != null);
-        const avgDeg   = degs.length ? degs.reduce((a, b) => a + b) / degs.length : null;
-        const totalLaps = stints.reduce((n, s) => n + s.laps.length, 0);
-        const driverList = [...new Set(stints.map(s => `${s.driver.split(' ')[0]}(С${s.stintNum})`))].join(', ');
-        const isPitKart = kNr === pk1 || kNr === pk2;
-        const speedPct = totalAvg && worstKA > bestKA
-          ? Math.round(((worstKA - totalAvg) / (worstKA - bestKA)) * 100) : 50;
-        const barCol = speedPct >= 70 ? '#4caf50' : speedPct >= 40 ? '#ffd54f' : '#e94560';
-        const kTechNr = techMap[kNr];
-        return `<tr>
-          <td>
-            <span style="color:var(--accent-blue);font-weight:700;font-size:1.05rem">К${kNr}</span>
-            ${isPitKart ? '<span style="font-size:0.7rem;color:var(--accent-yellow);margin-left:5px">питкарт</span>' : ''}
-            ${kTechNr ? `<br><span style="font-size:0.75rem;color:var(--text-dim)">${kTechNr}</span>` : ''}
-          </td>
-          <td><div style="display:flex;align-items:center;gap:8px">
-            <div style="flex:1;height:7px;background:rgba(255,255,255,0.06);border-radius:4px;overflow:hidden">
-              <div style="height:100%;width:${speedPct}%;background:${barCol};border-radius:4px"></div>
-            </div><span style="font-size:0.8rem;color:var(--text-dim);width:26px">${speedPct}</span></div></td>
-          <td>${totalAvg ? formatTime(totalAvg) : '—'}</td>
-          <td class="best-val">${isFinite(bestLap) ? formatTime(bestLap) : '—'}</td>
-          <td>${degFmt(avgDeg)}</td>
-          <td>${totalLaps}</td>
-          <td style="font-size:0.78rem;color:var(--text-dim)">${driverList}</td>
-        </tr>`;
-      }).join('');
+    // Build row data objects for sorting
+    const kartRowData = Object.entries(kartMap).map(([kNr, stints]) => {
+      const avgs     = stints.map(s => s.avg).filter(Boolean);
+      const totalAvg = stintAvg(avgs);
+      const bests    = stints.map(s => s.best).filter(v => v != null && isFinite(v));
+      const bestLap  = bests.length ? Math.min(...bests) : null;
+      const degs     = stints.map(s => s.deg).filter(v => v != null);
+      const avgDeg   = degs.length ? degs.reduce((a, b) => a + b) / degs.length : null;
+      const totalLaps = stints.reduce((n, s) => n + s.laps.length, 0);
+      const driverList = [...new Set(stints.map(s => `${s.driver.split(' ')[0]}(С${s.stintNum})`))].join(', ');
+      const isPitKart = kNr === pk1 || kNr === pk2;
+      const speedPct = totalAvg && worstKA > bestKA
+        ? Math.round(((worstKA - totalAvg) / (worstKA - bestKA)) * 100) : 50;
+      return { kNr, totalAvg, bestLap, avgDeg, totalLaps, driverList, isPitKart, speedPct };
+    });
+
+    // Apply sort
+    kartRowData.sort((a, b) => {
+      const { col, dir } = _kartsSort;
+      const nullLast = (av, bv) => {
+        if (av == null && bv == null) return 0;
+        if (av == null) return 1;
+        if (bv == null) return -1;
+        return (av - bv) * dir;
+      };
+      if (col === 'kart')   return (parseInt(a.kNr) - parseInt(b.kNr)) * dir;
+      if (col === 'rating') return nullLast(a.speedPct, b.speedPct);
+      if (col === 'avg')    return nullLast(a.totalAvg, b.totalAvg);
+      if (col === 'best')   return nullLast(a.bestLap, b.bestLap);
+      if (col === 'deg')    return nullLast(a.avgDeg, b.avgDeg);
+      if (col === 'laps')   return (a.totalLaps - b.totalLaps) * dir;
+      return 0;
+    });
+
+    const kartRows = kartRowData.map(({ kNr, totalAvg, bestLap, avgDeg, totalLaps, driverList, isPitKart, speedPct }) => {
+      const barCol = speedPct >= 70 ? '#4caf50' : speedPct >= 40 ? '#ffd54f' : '#e94560';
+      const kTechNr = techMap[kNr];
+      return `<tr>
+        <td>
+          <span style="color:var(--accent-blue);font-weight:700;font-size:1.05rem">К${kNr}</span>
+          ${isPitKart ? '<span style="font-size:0.7rem;color:var(--accent-yellow);margin-left:5px">питкарт</span>' : ''}
+          ${kTechNr ? `<br><span style="font-size:0.75rem;color:var(--text-dim)">${kTechNr}</span>` : ''}
+        </td>
+        <td><div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;height:5px;background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden">
+            <div style="height:100%;width:${speedPct}%;background:${barCol};border-radius:99px"></div>
+          </div><span style="font-size:0.8rem;color:var(--text-dim);width:26px">${speedPct}</span></div></td>
+        <td>${totalAvg ? formatTime(totalAvg) : '—'}</td>
+        <td class="best-val">${bestLap != null && isFinite(bestLap) ? formatTime(bestLap) : '—'}</td>
+        <td>${degFmt(avgDeg)}</td>
+        <td>${totalLaps}</td>
+        <td style="font-size:0.78rem;color:var(--text-dim)">${driverList}</td>
+      </tr>`;
+    }).join('');
+
+    const kartThs = `<tr>
+      ${sortThHtml('Карт',        'kart',   _kartsSort, 'karts')}
+      ${sortThHtml('Рейтинг',     'rating', _kartsSort, 'karts')}
+      ${sortThHtml('Ср. темп',    'avg',    _kartsSort, 'karts')}
+      ${sortThHtml('Лучший',      'best',   _kartsSort, 'karts')}
+      ${sortThHtml('Деградация',  'deg',    _kartsSort, 'karts')}
+      ${sortThHtml('Кругов',      'laps',   _kartsSort, 'karts')}
+      <th>Пилоты</th></tr>`;
 
     kartPerfCard = `
 <div class="card">
   <h3>&#127950; Производительность картов</h3>
   <p style="font-size:0.8rem;color:var(--text-dim);margin-bottom:14px">Рейтинг — относительный по гонке. Ср. темп не нормирован по пилоту.</p>
   <div class="table-wrap"><table>
-    <thead><tr><th>Карт</th><th>Рейтинг</th><th>Ср. темп</th><th>Лучший</th><th>Деградация</th><th>Кругов</th><th>Пилоты</th></tr></thead>
+    <thead>${kartThs}</thead>
     <tbody>${kartRows}</tbody>
   </table></div>
 </div>`;
@@ -2949,6 +3099,21 @@ function renderKartsTab() {
 </div>` : '';
 
   panel.innerHTML = configCard + stintCard + stintChartCard + kartPerfCard + evoCard;
+
+  // Wire sortable column headers
+  panel.querySelectorAll('th[data-sort]').forEach(th => {
+    th.addEventListener('click', () => {
+      const [prefix, col] = th.dataset.sort.split(':');
+      if (prefix === 'karts') {
+        if (_kartsSort.col === col) _kartsSort.dir *= -1;
+        else { _kartsSort.col = col; _kartsSort.dir = col === 'avg' || col === 'best' ? 1 : -1; }
+      } else if (prefix === 'stints') {
+        if (_stintsSort.col === col) _stintsSort.dir *= -1;
+        else { _stintsSort.col = col; _stintsSort.dir = col === 'driver' ? 1 : 1; }
+      }
+      renderKartsTab();
+    });
+  });
 
   // Wire "Применить" (pit karts)
   document.getElementById('applyPitCfg').addEventListener('click', () => {
@@ -3168,6 +3333,9 @@ document.getElementById('btnAnalyze').addEventListener('click', async () => {
 
 // Back button
 document.getElementById('btnBack').addEventListener('click', showUpload);
+
+// PDF export
+document.getElementById('btnExportPDF').addEventListener('click', exportRacePDF);
 
 // Initialize history on load
 await renderHistory();
