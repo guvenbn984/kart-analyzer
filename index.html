@@ -7,8 +7,6 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.min.mjs" type="module"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link rel="stylesheet" href="colors_and_type.css">
 <style>
 :root {
@@ -811,6 +809,67 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.04); }
   .tabs { gap: 0; }
   .tab-btn { padding: 8px 12px; font-size: 0.8rem; }
 }
+
+/* ── Print / PDF export ─────────────────────────────────── */
+@media print {
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  body { background: #fff !important; color: #111 !important; font-size: 11pt; }
+
+  .header {
+    position: relative !important; background: #f8f8f8 !important;
+    border-bottom: 1px solid #ddd !important; padding: 10px 20px !important;
+    height: auto !important; break-inside: avoid;
+  }
+  .header h1 { font-size: 15pt !important; -webkit-text-fill-color: #e94560 !important; }
+  .btn-back, .btn-export-pdf, .header-info { display: none !important; }
+
+  .upload-section, .history-section { display: none !important; }
+
+  #app { max-width: 100% !important; padding: 10px !important; }
+
+  .tabs { display: none !important; }
+
+  .tab-panel { display: block !important; break-before: page; }
+  .tab-panel:first-of-type { break-before: avoid; }
+
+  .card {
+    background: #fff !important; border: 1px solid #ddd !important;
+    break-inside: avoid; margin-bottom: 14px; box-shadow: none !important;
+  }
+  .card h3 { color: #1a6fa8 !important; }
+
+  .event-info {
+    background: #f5f5f5 !important; border: 1px solid #ddd !important; color: #333 !important;
+  }
+  .event-info span, .event-info strong { color: #333 !important; }
+
+  thead th {
+    background: #f0f0f0 !important; color: #444 !important;
+    border-bottom: 1px solid #ccc !important;
+  }
+  tbody td { border-bottom: 1px solid #eee !important; color: #111 !important; }
+  tbody tr:nth-child(even) { background: #fafafa !important; }
+
+  .summary-card { background: #f5f5f5 !important; border: 1px solid #ddd !important; }
+  .summary-card .value { color: #c0304a !important; }
+  .summary-card .label { color: #666 !important; }
+
+  .best-val { color: #2e7d32 !important; }
+  .worst-val { color: #c0304a !important; }
+
+  .pos-up   { background: rgba(46,125,50,0.1) !important; color: #2e7d32 !important; }
+  .pos-down { background: rgba(192,48,74,0.1) !important; color: #c0304a !important; }
+  .pos-same { background: #f0f0f0 !important; color: #666 !important; }
+
+  .chart-container { break-inside: avoid; max-height: 280px; }
+  .table-wrap { overflow: visible !important; }
+  .driver-ratings-grid { grid-template-columns: repeat(3, 1fr) !important; }
+  .driver-rating-card { background: #fafafa !important; border: 1px solid #ddd !important; break-inside: avoid; }
+  .drc-verdict { color: #555 !important; }
+  .error-msg { display: none !important; }
+  .session-config, .driver-visibility-wrap, .controls { display: none !important; }
+}
 </style>
 </head>
 <body>
@@ -1136,7 +1195,7 @@ function loadFromHistory(id) {
   const entry = historyCache.find(h => h.id === id);
   if (!entry) return;
   parsedData = entry.data;
-  selectedDrivers.clear();
+  selectedDrivers = null; // reset so auto-select fires on next render
   showApp();
 }
 
@@ -1210,13 +1269,8 @@ function showApp() {
   renderAll();
 }
 
-async function exportRacePDF() {
-  const btn = document.getElementById('btnExportPDF');
-  const origText = btn.innerHTML;
-  btn.innerHTML = '&#9203; Генерация...';
-  btn.disabled = true;
-
-  // Temporarily make all tab panels visible for full capture
+function exportRacePDF() {
+  // Show all tab panels so they render in the print layout
   const panels = document.querySelectorAll('.tab-panel');
   const restored = [];
   panels.forEach(p => {
@@ -1226,46 +1280,11 @@ async function exportRacePDF() {
     }
   });
 
-  try {
-    // Brief pause so any lazy-rendered content can paint
-    await new Promise(r => setTimeout(r, 150));
+  // window.print() is synchronous — dialog blocks until dismissed
+  window.print();
 
-    const appEl = document.getElementById('app');
-    const canvas = await html2canvas(appEl, {
-      backgroundColor: '#0c0c14',
-      scale: 1.5,
-      useCORS: true,
-      logging: false,
-      allowTaint: true,
-    });
-
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const pageW = pdf.internal.pageSize.getWidth();
-    const pageH = pdf.internal.pageSize.getHeight();
-    const imgRatio = canvas.height / canvas.width;
-    const fullH = pageW * imgRatio;
-
-    // Split across pages
-    const imgData = canvas.toDataURL('image/jpeg', 0.92);
-    let y = 0;
-    while (y < fullH) {
-      if (y > 0) pdf.addPage();
-      pdf.addImage(imgData, 'JPEG', 0, -y, pageW, fullH);
-      y += pageH;
-    }
-
-    const ev = (parsedData?.meta?.event || 'Race').replace(/[\\/:*?"<>|]/g, '_');
-    const dt = parsedData?.meta?.date ? parsedData.meta.date.replace(/\./g, '-') : new Date().toISOString().slice(0, 10);
-    pdf.save(`KartRace_${ev}_${dt}.pdf`);
-  } catch (err) {
-    console.error('PDF export error:', err);
-    alert('Ошибка генерации PDF: ' + err.message);
-  } finally {
-    restored.forEach(p => { p.style.display = ''; });
-    btn.innerHTML = origText;
-    btn.disabled = false;
-  }
+  // Restore hidden panels after printing
+  restored.forEach(p => { p.style.display = ''; });
 }
 
 async function showUpload() {
@@ -2229,15 +2248,15 @@ function renderStandings() {
         <td>${r.laps}</td><td>${r.gap}</td>
         <td class="${i === 0 ? 'best-val' : ''}">${formatTime(r.bestLap)}</td>
         <td>${r.speed || '-'}</td><td>${r.penalty || '-'}</td>
-        ${quali.length ? `<td>${qp ? qp.position : '-'}</td><td class="${changeClass}">${changeText}</td>` : ''}
+        ${quali.length ? `<td style="color:var(--text-dim)">${qp ? qp.position : '-'}</td><td><span class="${changeClass}">${changeText}</span></td>` : ''}
       </tr>`;
     }).join('')}</tbody>
   </table>`;
   document.getElementById('standingsTable').innerHTML = html;
 }
 
-// Driver selection state
-let selectedDrivers = new Set();
+// Driver selection state — null means "not yet initialised, auto-select all on first render"
+let selectedDrivers = null;
 
 function populateDriverCheckboxes() {
   const lapData = parsedData.raceLaps || parsedData.qualiLaps;
@@ -2245,8 +2264,8 @@ function populateDriverCheckboxes() {
   const container = document.getElementById('driverCheckboxes');
   const drivers = Object.keys(lapData);
 
-  // Initialize all selected
-  if (selectedDrivers.size === 0) drivers.forEach(d => selectedDrivers.add(d));
+  // Auto-select all only on first load (null = not yet initialised)
+  if (selectedDrivers === null) selectedDrivers = new Set(drivers);
 
   container.innerHTML = drivers.map((driver, idx) => {
     const checked = selectedDrivers.has(driver);
@@ -2276,12 +2295,12 @@ function populateDriverCheckboxes() {
   });
 
   document.getElementById('btnSelectAll').onclick = () => {
-    drivers.forEach(d => selectedDrivers.add(d));
+    selectedDrivers = new Set(drivers);
     populateDriverCheckboxes();
     renderLapTimesChart(true);
   };
   document.getElementById('btnSelectNone').onclick = () => {
-    selectedDrivers.clear();
+    selectedDrivers = new Set(); // empty Set — stays empty on re-render (not null)
     populateDriverCheckboxes();
     renderLapTimesChart(true);
   };
@@ -2295,7 +2314,7 @@ function renderLapTimesChart(skipCheckboxes = false) {
 
   const filterOutliers = document.getElementById('filterOutliers').checked;
   const allDrivers = Object.keys(lapData);
-  const drivers = allDrivers.filter(d => selectedDrivers.has(d));
+  const drivers = selectedDrivers ? allDrivers.filter(d => selectedDrivers.has(d)) : allDrivers;
   const maxLaps = Math.max(...allDrivers.map(d => lapData[d].length));
 
   const datasets = drivers.map((driver) => {
@@ -2887,7 +2906,7 @@ function renderKartsTab() {
   const sortedKartNrs = [...allRaceKartNrs].sort((a, b) => +a - +b || a.localeCompare(b));
   const techInputsHtml = sortedKartNrs.length ? `
   <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
-    <div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:8px">&#128295; Технические номера картов <span style="font-size:0.73rem">(сохраняются глобально)</span>:</div>
+    <div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:8px">&#128295; Технические номера картов <span style="font-size:0.73rem">(сохраняются в рамках гонки)</span>:</div>
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">
       ${sortedKartNrs.map(k => `
         <div style="display:flex;align-items:center;gap:5px;padding:4px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px">
@@ -3316,7 +3335,7 @@ document.getElementById('btnAnalyze').addEventListener('click', async () => {
     parsedData.meta.pitStopsPerRace = sessionCfg.pitStopsPerRace;
     parsedData.meta.racesPerDay     = sessionCfg.racesPerDay;
 
-    selectedDrivers.clear();
+    selectedDrivers = null; // reset so auto-select fires on next render
     await saveToHistory(parsedData);
     showApp();
   } catch (err) {
@@ -3334,7 +3353,7 @@ document.getElementById('btnAnalyze').addEventListener('click', async () => {
 // Back button
 document.getElementById('btnBack').addEventListener('click', showUpload);
 
-// PDF export
+// PDF export (window.print)
 document.getElementById('btnExportPDF').addEventListener('click', exportRacePDF);
 
 // Initialize history on load
