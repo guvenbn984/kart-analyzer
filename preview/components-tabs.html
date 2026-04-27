@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #111118; font-family: 'DM Sans', system-ui, sans-serif; padding: 24px; display: flex; flex-direction: column; gap: 20px; -webkit-font-smoothing: antialiased; }
+.section-label { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #3a3a5c; }
+.tabs { display: flex; border-bottom: 1px solid rgba(255,255,255,0.07); gap: 2px; }
+.tab { padding: 10px 18px; background: transparent; border: none; border-bottom: 2px solid transparent; font-family: inherit; font-size: 13px; cursor: pointer; margin-bottom: -1px; transition: all 0.15s; white-space: nowrap; }
+.tab.default  { color: #6b7491; font-weight: 400; }
+.tab.hover    { color: #d8dce8; font-weight: 400; }
+.tab.active   { color: #d8dce8; font-weight: 600; border-bottom-color: #e94560; }
+</style></head>
+<body>
+
+<div class="section-label">Tab Navigation</div>
+<div class="tabs">
+  <button class="tab active">Итоги</button>
+  <button class="tab default">Время кругов</button>
+  <button class="tab hover">Темп</button>
+  <button class="tab default">Стабильность</button>
+  <button class="tab default">Позиции</button>
+  <button class="tab default">Деградация</button>
+  <button class="tab default">Карты</button>
+</div>
+
+<div style="display:flex;gap:24px;font-size:11px;color:#2e3050;">
+  <span><span style="color:#d8dce8;font-weight:600;">active</span> — full weight, 2px accent underline</span>
+  <span><span style="color:#6b7491;">default</span> — dim, no underline</span>
+  <span><span style="color:#a0a8be;">hover</span> — text brightens</span>
+</div>
+
+</body>
+</html>

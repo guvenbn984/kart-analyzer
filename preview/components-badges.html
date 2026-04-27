@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #111118; font-family: 'DM Sans', system-ui, sans-serif; padding: 24px; display: flex; flex-direction: column; gap: 20px; -webkit-font-smoothing: antialiased; }
+.section-label { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #3a3a5c; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+</style></head>
+<body>
+
+<div class="section-label">Status Badges</div>
+<div class="row">
+  <span style="font-size:11px;padding:3px 10px;border-radius:99px;background:rgba(79,195,247,0.1);color:#4fc3f7;border:1px solid rgba(79,195,247,0.2);font-weight:500;">☁ облако</span>
+  <span style="font-size:11px;padding:3px 10px;border-radius:99px;background:rgba(255,213,79,0.1);color:#ffd54f;border:1px solid rgba(255,213,79,0.2);font-weight:500;">◉ локально</span>
+  <span style="font-size:13px;color:#d8dce8;font-weight:500;">Сохранённые результаты</span>
+</div>
+
+<div class="section-label">Driver Checkboxes</div>
+<div class="row">
+  <div style="display:flex;align-items:center;gap:7px;padding:4px 12px 4px 8px;background:#18182a;border:1px solid rgba(255,255,255,0.07);border-radius:99px;font-size:12px;color:#d8dce8;">
+    <div style="width:8px;height:8px;border-radius:50%;background:#e94560;flex-shrink:0;"></div>Иванов
+  </div>
+  <div style="display:flex;align-items:center;gap:7px;padding:4px 12px 4px 8px;background:#18182a;border:1px solid rgba(255,255,255,0.07);border-radius:99px;font-size:12px;color:#d8dce8;">
+    <div style="width:8px;height:8px;border-radius:50%;background:#4fc3f7;flex-shrink:0;"></div>Петров
+  </div>
+  <div style="display:flex;align-items:center;gap:7px;padding:4px 12px 4px 8px;background:#18182a;border:1px solid rgba(255,255,255,0.07);border-radius:99px;font-size:12px;color:#d8dce8;opacity:0.35;">
+    <div style="width:8px;height:8px;border-radius:50%;background:#4caf50;flex-shrink:0;"></div>Сидоров
+  </div>
+  <div style="display:flex;align-items:center;gap:7px;padding:4px 12px 4px 8px;background:#18182a;border:1px solid rgba(255,255,255,0.07);border-radius:99px;font-size:12px;color:#d8dce8;">
+    <div style="width:8px;height:8px;border-radius:50%;background:#ffd54f;flex-shrink:0;"></div>Козлов
+  </div>
+</div>
+
+<div class="section-label">Position Delta Badges</div>
+<div class="row">
+  <span style="display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:700;background:rgba(76,175,80,0.12);color:#4caf50;">↑ +3</span>
+  <span style="display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:700;background:rgba(107,116,145,0.1);color:#4a506a;">— 0</span>
+  <span style="display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:700;background:rgba(233,69,96,0.12);color:#e94560;">↓ −2</span>
+</div>
+
+<div class="section-label">Driver Visibility Toggles</div>
+<div class="row">
+  <div style="padding:4px 12px;background:#18182a;border:1px solid rgba(255,255,255,0.07);border-radius:99px;font-size:12px;color:#d8dce8;">Иванов</div>
+  <div style="padding:4px 12px;background:transparent;border:1px dashed rgba(255,255,255,0.1);border-radius:99px;font-size:12px;color:#4a506a;text-decoration:line-through;opacity:0.45;">Петров</div>
+  <div style="padding:4px 12px;background:#18182a;border:1px solid rgba(255,255,255,0.07);border-radius:99px;font-size:12px;color:#d8dce8;">Козлов</div>
+</div>
+
+</body>
+</html>

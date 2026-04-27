@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #111118; font-family: 'DM Sans', system-ui, sans-serif; padding: 24px; display: flex; flex-direction: column; gap: 16px; -webkit-font-smoothing: antialiased; }
+.section-label { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #3a3a5c; }
+.row { display: flex; gap: 12px; }
+.zone { flex: 1; border-radius: 14px; padding: 24px 16px; text-align: center; }
+.zone-icon { font-size: 28px; margin-bottom: 8px; }
+.zone-label { font-size: 13px; font-weight: 600; color: #d8dce8; margin-bottom: 4px; }
+.zone-hint  { font-size: 11px; color: #6b7491; }
+.zone-file  { margin-top: 8px; font-size: 11px; color: #4caf50; font-weight: 500; }
+.state-lbl  { font-size: 10px; color: #2e3050; text-align: center; margin-top: 6px; }
+</style></head>
+<body>
+
+<div class="section-label">Upload Zones</div>
+<div class="row">
+  <div>
+    <div class="zone" style="background:#18182a;border:1.5px dashed rgba(255,255,255,0.1);">
+      <div class="zone-icon">⏱</div>
+      <div class="zone-label">Квалификация (Q)</div>
+      <div class="zone-hint">Перетащите PDF или нажмите</div>
+    </div>
+    <div class="state-lbl">default</div>
+  </div>
+  <div>
+    <div class="zone" style="background:rgba(233,69,96,0.04);border:1.5px dashed #e94560;">
+      <div class="zone-icon">🏁</div>
+      <div class="zone-label">Гонка (R)</div>
+      <div class="zone-hint">Перетащите PDF или нажмите</div>
+    </div>
+    <div class="state-lbl">dragover</div>
+  </div>
+  <div>
+    <div class="zone" style="background:rgba(76,175,80,0.05);border:1.5px solid #4caf50;">
+      <div class="zone-icon">🏁</div>
+      <div class="zone-label">Гонка (R)</div>
+      <div class="zone-hint">Перетащите PDF или нажмите</div>
+      <div class="zone-file">race_cityfight_apr.pdf</div>
+    </div>
+    <div class="state-lbl">loaded</div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #111118;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.section { display: flex; flex-direction: column; gap: 8px; }
+.section-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #3a3a5c;
+}
+
+/* Swatch strip */
+.strip { display: flex; height: 40px; border-radius: 8px; overflow: hidden; }
+.strip-seg { flex: 1; position: relative; cursor: default; }
+
+/* Token rows */
+.token-list { display: flex; flex-direction: column; gap: 1px; }
+.token-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.token-row:last-child { border-bottom: none; }
+.token-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.token-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #c8d0e0;
+  flex: 1;
+}
+.token-desc {
+  font-size: 11px;
+  color: #3e4060;
+  flex: 2;
+}
+.token-hex {
+  font-size: 11px;
+  color: #4a506a;
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+  letter-spacing: 0.04em;
+}
+</style></head>
+<body>
+
+<div class="section">
+  <div class="section-label">Color strip</div>
+  <div class="strip">
+    <div class="strip-seg" style="background:#0f0f1a;"></div>
+    <div class="strip-seg" style="background:#1a1a2e;"></div>
+    <div class="strip-seg" style="background:#16213e;"></div>
+    <div class="strip-seg" style="background:#2a2a4a;"></div>
+    <div class="strip-seg" style="background:#8892a4;"></div>
+    <div class="strip-seg" style="background:#e0e0e0;"></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">Tokens</div>
+  <div class="token-list">
+    <div class="token-row">
+      <div class="token-dot" style="background:#0f0f1a;"></div>
+      <span class="token-name">--bg</span>
+      <span class="token-desc">Page background</span>
+      <span class="token-hex">#0f0f1a</span>
+    </div>
+    <div class="token-row">
+      <div class="token-dot" style="background:#1a1a2e;"></div>
+      <span class="token-name">--bg-card</span>
+      <span class="token-desc">Card & panel surface</span>
+      <span class="token-hex">#1a1a2e</span>
+    </div>
+    <div class="token-row">
+      <div class="token-dot" style="background:#16213e;"></div>
+      <span class="token-name">--bg-card-alt</span>
+      <span class="token-desc">Inset / table header</span>
+      <span class="token-hex">#16213e</span>
+    </div>
+    <div class="token-row">
+      <div class="token-dot" style="background:#2a2a4a;"></div>
+      <span class="token-name">--border</span>
+      <span class="token-desc">All dividers & borders</span>
+      <span class="token-hex">#2a2a4a</span>
+    </div>
+    <div class="token-row">
+      <div class="token-dot" style="background:#8892a4; border-color:rgba(255,255,255,0.1);"></div>
+      <span class="token-name">--text-dim</span>
+      <span class="token-desc">Labels, hints, secondary</span>
+      <span class="token-hex">#8892a4</span>
+    </div>
+    <div class="token-row">
+      <div class="token-dot" style="background:#e0e0e0; border-color:rgba(255,255,255,0.15);"></div>
+      <span class="token-name">--text</span>
+      <span class="token-desc">Primary text</span>
+      <span class="token-hex">#e0e0e0</span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

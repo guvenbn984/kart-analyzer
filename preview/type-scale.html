@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #111118;
+  font-family: 'DM Sans', sans-serif;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.section-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #3a3a5c;
+  padding-bottom: 12px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.row:last-child { border-bottom: none; }
+
+.meta {
+  width: 100px;
+  flex-shrink: 0;
+}
+.meta-size {
+  font-size: 10px;
+  color: #2e3050;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 400;
+}
+.meta-token {
+  font-size: 9px;
+  color: #252540;
+  font-family: 'DM Sans', sans-serif;
+  margin-top: 1px;
+}
+
+.specimen { flex: 1; line-height: 1.2; font-family: 'DM Sans', sans-serif; }
+</style></head>
+<body>
+
+<div class="section-label">Type scale — DM Sans</div>
+
+<div class="row">
+  <div class="meta"><div class="meta-size">40px · 800</div><div class="meta-token">text-3xl</div></div>
+  <div class="specimen" style="font-size:40px;font-weight:800;background:linear-gradient(135deg,#e94560,#ff9800);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Analyzer</div>
+</div>
+
+<div class="row">
+  <div class="meta"><div class="meta-size">29px · 700</div><div class="meta-token">text-2xl</div></div>
+  <div class="specimen" style="font-size:29px;font-weight:700;color:#e94560;">34.521</div>
+</div>
+
+<div class="row">
+  <div class="meta"><div class="meta-size">26px · 700</div><div class="meta-token">text-xl</div></div>
+  <div class="specimen" style="font-size:26px;font-weight:700;color:#e0e0e0;">Kart Race Analyzer</div>
+</div>
+
+<div class="row">
+  <div class="meta"><div class="meta-size">18px · 600</div><div class="meta-token">text-lg</div></div>
+  <div class="specimen" style="font-size:18px;font-weight:600;color:#4fc3f7;">Итоговая классификация</div>
+</div>
+
+<div class="row">
+  <div class="meta"><div class="meta-size">16px · 400</div><div class="meta-token">text-md</div></div>
+  <div class="specimen" style="font-size:16px;font-weight:400;color:#c8d0e0;">Рейтинг рассчитывается по всем сохранённым гонкам.</div>
+</div>
+
+<div class="row">
+  <div class="meta"><div class="meta-size">14px · 400</div><div class="meta-token">text-base</div></div>
+  <div class="specimen" style="font-size:14px;font-weight:400;color:#c8d0e0;">Итоги · Темп · Стабильность · Позиции · Деградация</div>
+</div>
+
+<div class="row">
+  <div class="meta"><div class="meta-size">13px · 400</div><div class="meta-token">text-sm</div></div>
+  <div class="specimen" style="font-size:13px;font-weight:400;color:#8892a4;">Перетащите PDF или нажмите для загрузки</div>
+</div>
+
+<div class="row">
+  <div class="meta"><div class="meta-size">10px · 600</div><div class="meta-token">text-xs</div></div>
+  <div class="specimen" style="font-size:10px;font-weight:600;color:#3e4060;letter-spacing:0.1em;text-transform:uppercase;">Section label</div>
+</div>
+
+</body>
+</html>

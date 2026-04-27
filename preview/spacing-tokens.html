@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #111118; font-family: 'DM Sans', system-ui, sans-serif; padding: 24px; display: flex; flex-direction: column; gap: 24px; -webkit-font-smoothing: antialiased; }
+.section-label { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #3a3a5c; margin-bottom: -16px; }
+.token-list { display: flex; flex-direction: column; }
+.token-row { display: flex; align-items: center; gap: 14px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.token-row:last-child { border-bottom: none; }
+.token-name { font-size: 12px; font-weight: 600; color: #c8d0e0; flex: 1; font-family: 'Cascadia Code', 'Consolas', monospace; }
+.token-desc { font-size: 11px; color: #3e4060; flex: 2; }
+.token-val  { font-size: 11px; color: #4a506a; font-family: monospace; }
+</style></head>
+<body>
+
+<div class="section-label">Border Radius</div>
+<div style="display:flex;gap:10px;align-items:flex-end;">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+    <div style="width:40px;height:40px;background:#18182a;border:1px solid rgba(255,255,255,0.07);border-radius:4px;"></div>
+    <span style="font-size:10px;color:#3e4060;">4px · bar</span>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+    <div style="width:44px;height:44px;background:#18182a;border:1px solid rgba(255,255,255,0.07);border-radius:6px;"></div>
+    <span style="font-size:10px;color:#3e4060;">6px · sm</span>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+    <div style="width:52px;height:52px;background:#18182a;border:1px solid rgba(255,255,255,0.07);border-radius:10px;"></div>
+    <span style="font-size:10px;color:#3e4060;">10px · card</span>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+    <div style="width:56px;height:56px;background:#18182a;border:1px solid rgba(255,255,255,0.07);border-radius:14px;"></div>
+    <span style="font-size:10px;color:#3e4060;">14px · lg</span>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+    <div style="width:44px;height:28px;background:#18182a;border:1px solid rgba(255,255,255,0.07);border-radius:99px;"></div>
+    <span style="font-size:10px;color:#3e4060;">99px · pill</span>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+    <div style="width:28px;height:28px;background:#18182a;border:1px solid rgba(255,255,255,0.07);border-radius:50%;"></div>
+    <span style="font-size:10px;color:#3e4060;">50% · dot</span>
+  </div>
+</div>
+
+<div class="section-label">Shadows</div>
+<div style="display:flex;gap:12px;">
+  <div style="flex:1;height:52px;background:#18182a;border:1px solid rgba(255,255,255,0.07);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;font-size:11px;color:#3e4060;">card · rgba(0,0,0,0.4)</div>
+  <div style="flex:1;height:52px;background:#18182a;border:1px solid rgba(233,69,96,0.2);border-radius:12px;box-shadow:0 6px 25px rgba(233,69,96,0.35);display:flex;align-items:center;justify-content:center;font-size:11px;color:#e94560;">accent glow · rgba(accent,0.35)</div>
+</div>
+
+<div class="section-label">Spacing</div>
+<div class="token-list">
+  <div class="token-row"><span class="token-name">--gap-sm</span><span class="token-desc">Inline gaps, badge padding</span><span class="token-val">8px</span><div style="width:8px;height:8px;background:#4fc3f7;border-radius:2px;flex-shrink:0;"></div></div>
+  <div class="token-row"><span class="token-name">--gap</span><span class="token-desc">Card grid gap, section spacing</span><span class="token-val">20px</span><div style="width:20px;height:8px;background:#4fc3f7;border-radius:2px;flex-shrink:0;"></div></div>
+  <div class="token-row"><span class="token-name">card padding</span><span class="token-desc">Inner card padding</span><span class="token-val">20px</span><div style="width:20px;height:8px;background:#e94560;border-radius:2px;flex-shrink:0;"></div></div>
+  <div class="token-row"><span class="token-name">section margin</span><span class="token-desc">Between major sections</span><span class="token-val">40px</span><div style="width:40px;height:8px;background:#4caf50;border-radius:2px;flex-shrink:0;"></div></div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #111118; font-family: 'DM Sans', system-ui, sans-serif; padding: 24px; display: flex; flex-direction: column; gap: 1px; -webkit-font-smoothing: antialiased; }
+.section-label { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #3a3a5c; padding: 12px 0 10px; }
+.row { display: flex; align-items: baseline; gap: 14px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.row:last-child { border-bottom: none; }
+.role { width: 100px; flex-shrink: 0; font-size: 10px; color: #2e3050; }
+</style></head>
+<body>
+
+<div class="section-label">Element specimens</div>
+
+<div class="row">
+  <span class="role">h1 · gradient</span>
+  <span style="font-size:22px;font-weight:800;background:linear-gradient(135deg,#e94560,#ff9800);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Kart Race Analyzer</span>
+</div>
+
+<div class="row">
+  <span class="role">h2 · dim</span>
+  <span style="font-size:16px;font-weight:600;color:#6b7491;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:6px;flex:1;">Сохранённые результаты</span>
+</div>
+
+<div class="row">
+  <span class="role">h3 · blue</span>
+  <span style="font-size:16px;font-weight:600;color:#4fc3f7;">Итоговая классификация</span>
+</div>
+
+<div class="row">
+  <span class="role">body</span>
+  <span style="font-size:14px;color:#d8dce8;flex:1;">Рейтинг рассчитывается как среднее значение по всем сохранённым гонкам пилота.</span>
+</div>
+
+<div class="row">
+  <span class="role">label · dim</span>
+  <span style="font-size:12px;color:#6b7491;">Перетащите PDF или нажмите</span>
+</div>
+
+<div class="row">
+  <span class="role">data value</span>
+  <span style="font-size:26px;font-weight:800;color:#e94560;font-variant-numeric:tabular-nums;">34.521</span>
+  <span style="font-size:12px;color:#6b7491;align-self:flex-end;padding-bottom:3px;">лучший круг</span>
+</div>
+
+<div class="row">
+  <span class="role">event info</span>
+  <span style="font-size:12px;color:#6b7491;">Дата: </span><span style="font-size:12px;color:#d8dce8;font-weight:500;">12.04.2024</span>
+  <span style="font-size:12px;color:#6b7491;margin-left:8px;">Событие: </span><span style="font-size:12px;color:#d8dce8;font-weight:500;">CityFight</span>
+</div>
+
+</body>
+</html>

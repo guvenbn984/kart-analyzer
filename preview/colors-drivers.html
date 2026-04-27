@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #111118;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.section-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #3a3a5c;
+}
+
+/* Full-width strip */
+.strip {
+  display: flex;
+  height: 32px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.strip-seg { flex: 1; }
+
+/* Grid of driver swatches */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+
+.swatch {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.04);
+}
+
+.swatch-color { height: 36px; }
+
+.swatch-info {
+  background: #16182a;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.swatch-num {
+  font-size: 10px;
+  font-weight: 700;
+  color: #c8d0e0;
+}
+
+.swatch-hex {
+  font-size: 9px;
+  color: #3e4060;
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+}
+</style></head>
+<body>
+
+<div class="section-label">12-slot palette</div>
+
+<div class="strip">
+  <div class="strip-seg" style="background:#e94560;"></div>
+  <div class="strip-seg" style="background:#4fc3f7;"></div>
+  <div class="strip-seg" style="background:#4caf50;"></div>
+  <div class="strip-seg" style="background:#ffd54f;"></div>
+  <div class="strip-seg" style="background:#ff9800;"></div>
+  <div class="strip-seg" style="background:#ab47bc;"></div>
+  <div class="strip-seg" style="background:#26a69a;"></div>
+  <div class="strip-seg" style="background:#ef5350;"></div>
+  <div class="strip-seg" style="background:#7e57c2;"></div>
+  <div class="strip-seg" style="background:#66bb6a;"></div>
+  <div class="strip-seg" style="background:#42a5f5;"></div>
+  <div class="strip-seg" style="background:#ff7043;"></div>
+</div>
+
+<div class="grid">
+  <div class="swatch">
+    <div class="swatch-color" style="background:#e94560;"></div>
+    <div class="swatch-info"><span class="swatch-num">01</span><span class="swatch-hex">#e94560</span></div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:#4fc3f7;"></div>
+    <div class="swatch-info"><span class="swatch-num">02</span><span class="swatch-hex">#4fc3f7</span></div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:#4caf50;"></div>
+    <div class="swatch-info"><span class="swatch-num">03</span><span class="swatch-hex">#4caf50</span></div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:#ffd54f;"></div>
+    <div class="swatch-info"><span class="swatch-num">04</span><span class="swatch-hex">#ffd54f</span></div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:#ff9800;"></div>
+    <div class="swatch-info"><span class="swatch-num">05</span><span class="swatch-hex">#ff9800</span></div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:#ab47bc;"></div>
+    <div class="swatch-info"><span class="swatch-num">06</span><span class="swatch-hex">#ab47bc</span></div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:#26a69a;"></div>
+    <div class="swatch-info"><span class="swatch-num">07</span><span class="swatch-hex">#26a69a</span></div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:#ef5350;"></div>
+    <div class="swatch-info"><span class="swatch-num">08</span><span class="swatch-hex">#ef5350</span></div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:#7e57c2;"></div>
+    <div class="swatch-info"><span class="swatch-num">09</span><span class="swatch-hex">#7e57c2</span></div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:#66bb6a;"></div>
+    <div class="swatch-info"><span class="swatch-num">10</span><span class="swatch-hex">#66bb6a</span></div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:#42a5f5;"></div>
+    <div class="swatch-info"><span class="swatch-num">11</span><span class="swatch-hex">#42a5f5</span></div>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:#ff7043;"></div>
+    <div class="swatch-info"><span class="swatch-num">12</span><span class="swatch-hex">#ff7043</span></div>
+  </div>
+</div>
+
+</body>
+</html>

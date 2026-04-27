@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #111118; font-family: 'DM Sans', system-ui, sans-serif; padding: 24px; display: flex; flex-direction: column; gap: 20px; -webkit-font-smoothing: antialiased; }
+.section-label { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #3a3a5c; margin-bottom: -12px; }
+.token-list { display: flex; flex-direction: column; }
+.token-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.token-row:last-child { border-bottom: none; }
+.token-dot { width: 28px; height: 28px; border-radius: 6px; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.06); }
+.token-name { font-size: 12px; font-weight: 600; color: #c8d0e0; flex: 1; }
+.token-desc { font-size: 11px; color: #3e4060; flex: 2; }
+</style></head>
+<body>
+
+<div class="section-label">Data Semantics</div>
+<div class="token-list">
+  <div class="token-row">
+    <div class="token-dot" style="background:#4caf50;"></div>
+    <span class="token-name">best · gain</span>
+    <span class="token-desc">Best lap time, position gained</span>
+    <span style="font-size:12px;font-weight:700;color:#4caf50;font-variant-numeric:tabular-nums;">34.521 ↑ +3</span>
+  </div>
+  <div class="token-row">
+    <div class="token-dot" style="background:#e94560;"></div>
+    <span class="token-name">worst · loss</span>
+    <span class="token-desc">Worst lap, position lost</span>
+    <span style="font-size:12px;font-weight:700;color:#e94560;font-variant-numeric:tabular-nums;">37.102 ↓ −2</span>
+  </div>
+  <div class="token-row">
+    <div class="token-dot" style="background:#6b7491;"></div>
+    <span class="token-name">neutral</span>
+    <span class="token-desc">No position change</span>
+    <span style="font-size:12px;font-weight:700;color:#4a506a;">— 0</span>
+  </div>
+  <div class="token-row">
+    <div class="token-dot" style="background:#4fc3f7;"></div>
+    <span class="token-name">info</span>
+    <span class="token-desc">Card headings, section titles</span>
+    <span style="font-size:12px;font-weight:600;color:#4fc3f7;">Итоговая классификация</span>
+  </div>
+</div>
+
+<div class="section-label">Score Tiers</div>
+<div style="display:flex;gap:8px;">
+  <div style="flex:1;background:#18182a;border-radius:10px;padding:12px;border-top:2px solid #4caf50;text-align:center;">
+    <div style="font-size:22px;font-weight:800;color:#4caf50;line-height:1;">87</div>
+    <div style="font-size:10px;color:#4caf50;font-weight:600;letter-spacing:0.05em;margin-top:4px;">ОТЛИЧНО</div>
+  </div>
+  <div style="flex:1;background:#18182a;border-radius:10px;padding:12px;border-top:2px solid #8bc34a;text-align:center;">
+    <div style="font-size:22px;font-weight:800;color:#8bc34a;line-height:1;">74</div>
+    <div style="font-size:10px;color:#8bc34a;font-weight:600;letter-spacing:0.05em;margin-top:4px;">ХОРОШО</div>
+  </div>
+  <div style="flex:1;background:#18182a;border-radius:10px;padding:12px;border-top:2px solid #ffd54f;text-align:center;">
+    <div style="font-size:22px;font-weight:800;color:#ffd54f;line-height:1;">60</div>
+    <div style="font-size:10px;color:#ffd54f;font-weight:600;letter-spacing:0.05em;margin-top:4px;">СРЕДНЕ</div>
+  </div>
+  <div style="flex:1;background:#18182a;border-radius:10px;padding:12px;border-top:2px solid #ff9800;text-align:center;">
+    <div style="font-size:22px;font-weight:800;color:#ff9800;line-height:1;">51</div>
+    <div style="font-size:10px;color:#ff9800;font-weight:600;letter-spacing:0.05em;margin-top:4px;">НИЖЕ СР.</div>
+  </div>
+  <div style="flex:1;background:#18182a;border-radius:10px;padding:12px;border-top:2px solid #e94560;text-align:center;">
+    <div style="font-size:22px;font-weight:800;color:#e94560;line-height:1;">28</div>
+    <div style="font-size:10px;color:#e94560;font-weight:600;letter-spacing:0.05em;margin-top:4px;">СЛАБО</div>
+  </div>
+</div>
+
+<div class="section-label">Podium</div>
+<div style="display:flex;gap:8px;">
+  <div style="flex:1;height:36px;background:#18182a;border-radius:8px;border-left:3px solid gold;display:flex;align-items:center;padding:0 12px;gap:10px;font-size:12px;font-weight:600;color:gold;">🥇 1st place</div>
+  <div style="flex:1;height:36px;background:#18182a;border-radius:8px;border-left:3px solid silver;display:flex;align-items:center;padding:0 12px;gap:10px;font-size:12px;font-weight:600;color:silver;">🥈 2nd place</div>
+  <div style="flex:1;height:36px;background:#18182a;border-radius:8px;border-left:3px solid #cd7f32;display:flex;align-items:center;padding:0 12px;gap:10px;font-size:12px;font-weight:600;color:#cd7f32;">🥉 3rd place</div>
+</div>
+
+</body>
+</html>

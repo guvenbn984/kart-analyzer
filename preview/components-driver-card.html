@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0f0f1a;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  padding: 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.card {
+  background: #1a1a2e;
+  border: 1px solid #2a2a4a;
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle colored top accent stripe */
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  border-radius: 14px 14px 0 0;
+}
+.card.excellent::before { background: linear-gradient(90deg, #4caf50, #66bb6a); }
+.card.below::before    { background: linear-gradient(90deg, #ff9800, #ffd54f); }
+
+/* Header row */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #e0e0e0;
+  line-height: 1.2;
+}
+.kart {
+  font-size: 0.75rem;
+  color: #8892a4;
+  margin-top: 3px;
+}
+.score-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.score {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.score-tier {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+/* Metric rows */
+.metrics { display: flex; flex-direction: column; gap: 9px; }
+.metric { display: flex; flex-direction: column; gap: 4px; }
+.metric-header { display: flex; justify-content: space-between; align-items: baseline; }
+.metric-label { font-size: 0.72rem; color: #8892a4; font-weight: 500; }
+.metric-val {
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.bar-track {
+  height: 5px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  border-radius: 99px;
+}
+
+/* Verdict */
+.verdict {
+  font-size: 0.78rem;
+  color: #8892a4;
+  line-height: 1.5;
+  border-top: 1px solid #2a2a4a;
+  padding-top: 12px;
+  font-style: normal;
+}
+</style></head>
+<body>
+
+<!-- Card 1: Excellent -->
+<div class="card excellent">
+  <div class="header">
+    <div>
+      <div class="name">Иванов</div>
+      <div class="kart">Карт #7</div>
+    </div>
+    <div class="score-wrap">
+      <div class="score" style="color:#4caf50;">87</div>
+      <div class="score-tier" style="color:#4caf50;">Отлично</div>
+    </div>
+  </div>
+
+  <div class="metrics">
+    <div class="metric">
+      <div class="metric-header">
+        <span class="metric-label">Темп <span style="color:#4a4a6a;">(30%)</span></span>
+        <span class="metric-val" style="color:#4caf50;">92</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:92%;background:linear-gradient(90deg,#4caf50,#66bb6a);"></div></div>
+    </div>
+    <div class="metric">
+      <div class="metric-header">
+        <span class="metric-label">Лучший круг <span style="color:#4a4a6a;">(20%)</span></span>
+        <span class="metric-val" style="color:#4fc3f7;">88</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:88%;background:linear-gradient(90deg,#4fc3f7,#81d4fa);"></div></div>
+    </div>
+    <div class="metric">
+      <div class="metric-header">
+        <span class="metric-label">Стабильность <span style="color:#4a4a6a;">(25%)</span></span>
+        <span class="metric-val" style="color:#ffd54f;">80</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:80%;background:linear-gradient(90deg,#ffd54f,#ffecb3);"></div></div>
+    </div>
+    <div class="metric">
+      <div class="metric-header">
+        <span class="metric-label">Гоночное мастерство <span style="color:#4a4a6a;">(15%)</span></span>
+        <span class="metric-val" style="color:#ff9800;">75</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:75%;background:linear-gradient(90deg,#ff9800,#ffcc02);"></div></div>
+    </div>
+    <div class="metric">
+      <div class="metric-header">
+        <span class="metric-label">Управление шинами <span style="color:#4a4a6a;">(10%)</span></span>
+        <span class="metric-val" style="color:#ab47bc;">90</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:90%;background:linear-gradient(90deg,#ab47bc,#ce93d8);"></div></div>
+    </div>
+  </div>
+
+  <div class="verdict">Отличный темп и стабильность — гонщик топ-уровня. Минимальное отклонение времён кругов в заезде.</div>
+</div>
+
+<!-- Card 2: Below average -->
+<div class="card below">
+  <div class="header">
+    <div>
+      <div class="name">Сидоров</div>
+      <div class="kart">Карт #5</div>
+    </div>
+    <div class="score-wrap">
+      <div class="score" style="color:#ff9800;">51</div>
+      <div class="score-tier" style="color:#ff9800;">Ниже среднего</div>
+    </div>
+  </div>
+
+  <div class="metrics">
+    <div class="metric">
+      <div class="metric-header">
+        <span class="metric-label">Темп <span style="color:#4a4a6a;">(30%)</span></span>
+        <span class="metric-val" style="color:#4caf50;">55</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:55%;background:linear-gradient(90deg,#4caf50,#66bb6a);"></div></div>
+    </div>
+    <div class="metric">
+      <div class="metric-header">
+        <span class="metric-label">Лучший круг <span style="color:#4a4a6a;">(20%)</span></span>
+        <span class="metric-val" style="color:#4fc3f7;">60</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:60%;background:linear-gradient(90deg,#4fc3f7,#81d4fa);"></div></div>
+    </div>
+    <div class="metric">
+      <div class="metric-header">
+        <span class="metric-label">Стабильность <span style="color:#4a4a6a;">(25%)</span></span>
+        <span class="metric-val" style="color:#ffd54f;">40</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:40%;background:linear-gradient(90deg,#ffd54f,#ffecb3);"></div></div>
+    </div>
+    <div class="metric">
+      <div class="metric-header">
+        <span class="metric-label">Гоночное мастерство <span style="color:#4a4a6a;">(15%)</span></span>
+        <span class="metric-val" style="color:#ff9800;">52</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:52%;background:linear-gradient(90deg,#ff9800,#ffcc02);"></div></div>
+    </div>
+    <div class="metric">
+      <div class="metric-header">
+        <span class="metric-label">Управление шинами <span style="color:#4a4a6a;">(10%)</span></span>
+        <span class="metric-val" style="color:#ab47bc;">45</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:45%;background:linear-gradient(90deg,#ab47bc,#ce93d8);"></div></div>
+    </div>
+  </div>
+
+  <div class="verdict">Нестабильный темп с высоким разбросом — основная точка роста. Работа над управлением шинами.</div>
+</div>
+
+</body>
+</html>

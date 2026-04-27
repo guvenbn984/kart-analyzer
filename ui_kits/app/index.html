@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kart Race Analyzer — UI Kit</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: #0c0c14;
+  color: #d8dce8;
+  min-height: 100vh;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+@keyframes kaspin { to { transform: rotate(360deg); } }
+@keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.fadein { animation: fadein 0.25s ease; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+/* ── TOKENS ─────────────────────────────────────────── */
+const C = {
+  bg:        '#0c0c14',
+  surface:   '#13131f',
+  card:      '#18182a',
+  cardAlt:   '#141428',
+  border:    'rgba(255,255,255,0.07)',
+  text:      '#d8dce8',
+  dim:       '#6b7491',
+  accent:    '#e94560',
+  blue:      '#4fc3f7',
+  green:     '#4caf50',
+  yellow:    '#ffd54f',
+  orange:    '#ff9800',
+};
+
+const DRIVER_COLORS = ['#e94560','#4fc3f7','#4caf50','#ffd54f','#ff9800','#ab47bc'];
+
+/* ── PRIMITIVES ──────────────────────────────────────── */
+function Btn({ children, primary, onClick, disabled, style }) {
+  const [h, setH] = React.useState(false);
+  return (
+    <button disabled={disabled} onClick={onClick}
+      onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+      style={{
+        fontFamily: 'inherit', fontWeight: 600, cursor: disabled ? 'not-allowed' : 'pointer',
+        border: 'none', transition: 'all 0.15s', borderRadius: 10,
+        ...(primary ? {
+          padding: '13px 36px', fontSize: 15,
+          background: h && !disabled ? 'linear-gradient(135deg,#f05470,#d03520)' : 'linear-gradient(135deg,#e94560,#c0392b)',
+          color: '#fff', opacity: disabled ? 0.45 : 1,
+          boxShadow: h && !disabled ? '0 8px 28px rgba(233,69,96,0.35)' : '0 4px 16px rgba(233,69,96,0.2)',
+          transform: h && !disabled ? 'translateY(-1px)' : 'none',
+        } : {
+          padding: '7px 16px', fontSize: 13,
+          background: h ? 'rgba(255,255,255,0.06)' : 'transparent',
+          color: h ? C.text : C.dim,
+          border: `1px solid ${h ? 'rgba(255,255,255,0.12)' : C.border}`,
+        }),
+        ...style,
+      }}>{children}</button>
+  );
+}
+
+function PillBtn({ children, active, onClick }) {
+  const [h, setH] = React.useState(false);
+  return (
+    <button onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+      style={{
+        padding: '5px 14px', borderRadius: 99, fontSize: 13, fontWeight: 600,
+        fontFamily: 'inherit', cursor: 'pointer', transition: 'all 0.15s',
+        background: active ? C.accent : h ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.03)',
+        color: active ? '#fff' : h ? C.text : C.dim,
+        border: `1px solid ${active ? C.accent : h ? 'rgba(255,255,255,0.1)' : C.border}`,
+      }}>{children}</button>
+  );
+}
+
+function Card({ children, style, title }) {
+  return (
+    <div style={{ background: C.card, borderRadius: 14, padding: 20, border: `1px solid ${C.border}`, ...style }}>
+      {title && <div style={{ fontSize: 13, fontWeight: 600, color: C.blue, marginBottom: 16, letterSpacing: '0.01em' }}>{title}</div>}
+      {children}
+    </div>
+  );
+}
+
+function StatChip({ value, label, color }) {
+  return (
+    <div style={{ background: C.surface, borderRadius: 12, padding: '14px 18px', border: `1px solid ${C.border}`, flex: 1, minWidth: 110 }}>
+      <div style={{ fontSize: 24, fontWeight: 800, color: color || C.accent, lineHeight: 1.1 }}>{value}</div>
+      <div style={{ fontSize: 11, color: C.dim, marginTop: 5, fontWeight: 500, letterSpacing: '0.02em' }}>{label}</div>
+    </div>
+  );
+}
+
+/* ── HEADER ──────────────────────────────────────────── */
+function Header({ showBack, onBack, subtitle }) {
+  return (
+    <div style={{
+      background: C.surface, borderBottom: `1px solid ${C.border}`,
+      padding: '0 28px', height: 56,
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        {showBack && (
+          <Btn onClick={onBack} style={{ padding: '5px 12px', fontSize: 13 }}>← Назад</Btn>
+        )}
+        <div>
+          <span style={{
+            fontSize: 17, fontWeight: 800,
+            background: 'linear-gradient(135deg,#e94560,#ff9800)',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+          }}>Kart Race Analyzer</span>
+        </div>
+      </div>
+      {subtitle && <div style={{ fontSize: 12, color: C.dim }}>{subtitle}</div>}
+    </div>
+  );
+}
+
+/* ── UPLOAD SCREEN ───────────────────────────────────── */
+const HISTORY = [
+  { id:'1', date:'12.04.2024', time:'14:30', event:'CityFight', session:'Гонка 1', drivers:12, winner:'Иванов', race:true },
+  { id:'2', date:'12.04.2024', time:'16:00', event:'CityFight', session:'Гонка 2', drivers:12, winner:'Петров', race:true },
+  { id:'3', date:'05.04.2024', time:'11:00', event:'CityFight', session:'Квалификация', drivers:10, winner:'Козлов', race:false },
+];
+
+function UploadZone({ icon, label, loaded, filename, onClick }) {
+  const [hover, setHover] = React.useState(false);
+  return (
+    <div onClick={onClick} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+      style={{
+        background: loaded ? 'rgba(76,175,80,0.05)' : hover ? 'rgba(233,69,96,0.04)' : C.card,
+        border: `1.5px ${loaded ? 'solid' : 'dashed'} ${loaded ? C.green : hover ? C.accent : C.border}`,
+        borderRadius: 14, padding: '28px 20px', textAlign: 'center', cursor: 'pointer',
+        transition: 'all 0.2s',
+      }}>
+      <div style={{ fontSize: 32, marginBottom: 10 }}>{icon}</div>
+      <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 12, color: C.dim }}>Перетащите PDF или нажмите</div>
+      {filename && <div style={{ marginTop: 8, fontSize: 12, color: C.green, fontWeight: 500 }}>{filename}</div>}
+    </div>
+  );
+}
+
+function HistoryRow({ item, onLoad }) {
+  const [h, setH] = React.useState(false);
+  return (
+    <div onClick={() => onLoad(item.id)} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px',
+        background: h ? C.card : C.surface,
+        border: `1px solid ${h ? 'rgba(79,195,247,0.2)' : C.border}`,
+        borderRadius: 12, cursor: 'pointer', transition: 'all 0.15s',
+      }}>
+      <div style={{ fontSize: 20, flexShrink: 0 }}>{item.race ? '🏁' : '⏱'}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>
+          {item.date} · {[item.event, item.session].filter(Boolean).join(' / ')}
+        </div>
+        <div style={{ fontSize: 11, color: C.dim, marginTop: 2 }}>
+          {item.drivers} пилотов · Победитель: <span style={{ color: C.text }}>{item.winner}</span>
+        </div>
+      </div>
+      <div style={{ fontSize: 11, color: C.dim }}>{item.time}</div>
+    </div>
+  );
+}
+
+function UploadScreen({ onAnalyze }) {
+  const [quali, setQuali] = React.useState(false);
+  const [race, setRace] = React.useState(false);
+  const [races, setRaces] = React.useState(1);
+  const [pits, setPits] = React.useState(1);
+  const [q, setQ] = React.useState('');
+  const items = HISTORY.filter(h => !q || [h.date, h.event, h.session, h.winner].join(' ').toLowerCase().includes(q.toLowerCase()));
+
+  return (
+    <div style={{ maxWidth: 860, margin: '48px auto', padding: '0 24px' }}>
+      {/* Upload zones */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+        <UploadZone icon="⏱" label="Квалификация (Q)" loaded={quali} filename={quali ? 'quali_cityfight.pdf' : null} onClick={() => setQuali(v => !v)} />
+        <UploadZone icon="🏁" label="Гонка (R)" loaded={race} filename={race ? 'race_cityfight.pdf' : null} onClick={() => setRace(v => !v)} />
+      </div>
+
+      {/* Session config */}
+      <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', alignItems: 'center', padding: '14px 18px', background: C.surface, borderRadius: 12, border: `1px solid ${C.border}`, marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 13, color: C.dim }}>Гонок в этот день:</span>
+          <div style={{ display: 'flex', gap: 5 }}>{[1,2,3].map(v => <PillBtn key={v} active={races===v} onClick={() => setRaces(v)}>{v}</PillBtn>)}</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 13, color: C.dim }}>Питстопов в гонке:</span>
+          <div style={{ display: 'flex', gap: 5 }}>{[0,1,2].map(v => <PillBtn key={v} active={pits===v} onClick={() => setPits(v)}>{v}</PillBtn>)}</div>
+        </div>
+      </div>
+
+      {/* CTA */}
+      <div style={{ textAlign: 'center', marginBottom: 52 }}>
+        <Btn primary disabled={!quali && !race} onClick={onAnalyze}>Анализировать</Btn>
+        {!quali && !race && <div style={{ marginTop: 10, fontSize: 12, color: C.dim }}>Загрузите хотя бы один PDF для анализа</div>}
+      </div>
+
+      {/* History */}
+      <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 28 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: C.dim }}>Сохранённые результаты</span>
+          <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: 'rgba(79,195,247,0.1)', color: C.blue, border: `1px solid rgba(79,195,247,0.2)` }}>☁ облако</span>
+        </div>
+        <input value={q} onChange={e => setQ(e.target.value)} placeholder="Поиск: дата, событие, пилот..."
+          style={{ width: '100%', background: C.surface, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 14px', fontSize: 13, fontFamily: 'inherit', marginBottom: 10, outline: 'none' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {items.map(item => <HistoryRow key={item.id} item={item} onLoad={onAnalyze} />)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── ANALYSIS APP ────────────────────────────────────── */
+const RESULTS = [
+  { pos:1, driver:'Иванов',  color:'#e94560', kart:7,  laps:18, best:'34.521', avg:'35.104', gap:'—',      delta:+3, score:87 },
+  { pos:2, driver:'Петров',  color:'#4fc3f7', kart:3,  laps:18, best:'34.891', avg:'35.412', gap:'+2.1',   delta: 0, score:79 },
+  { pos:3, driver:'Козлов',  color:'#4caf50', kart:11, laps:18, best:'35.012', avg:'35.720', gap:'+5.3',   delta:-1, score:74 },
+  { pos:4, driver:'Сидоров', color:'#ffd54f', kart:5,  laps:17, best:'35.448', avg:'37.102', gap:'+1 кр.', delta:+2, score:51 },
+  { pos:5, driver:'Морозов', color:'#ff9800', kart:9,  laps:17, best:'35.801', avg:'36.440', gap:'+1 кр.', delta:-2, score:63 },
+];
+
+const PODIUM = {1:'gold',2:'silver',3:'#cd7f32'};
+const SCORE_COLOR = s => s >= 80 ? '#4caf50' : s >= 65 ? '#8bc34a' : s >= 50 ? '#ffd54f' : '#ff9800';
+
+function Delta({ val }) {
+  const up = val > 0, dn = val < 0;
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 3,
+      padding: '3px 9px', borderRadius: 99, fontSize: 11, fontWeight: 700,
+      background: up ? 'rgba(76,175,80,0.12)' : dn ? 'rgba(233,69,96,0.12)' : 'rgba(107,116,145,0.1)',
+      color: up ? '#4caf50' : dn ? '#e94560' : '#4a506a',
+    }}>{up ? `↑ +${val}` : dn ? `↓ ${val}` : '— 0'}</span>
+  );
+}
+
+const TH = ({ children, right }) => (
+  <th style={{ padding: '10px 14px', textAlign: right ? 'right' : 'left', fontWeight: 600, fontSize: 11, color: '#3e4a6a', letterSpacing: '0.08em', textTransform: 'uppercase', borderBottom: `1px solid ${C.border}`, background: C.cardAlt, whiteSpace: 'nowrap' }}>{children}</th>
+);
+const TD = ({ children, right, style }) => (
+  <td style={{ padding: '11px 14px', fontSize: 13, borderBottom: `1px solid rgba(255,255,255,0.04)`, textAlign: right ? 'right' : 'left', verticalAlign: 'middle', ...style }}>{children}</td>
+);
+
+function StandingsTab() {
+  return (
+    <div className="fadein">
+      <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+        <StatChip value="5" label="ПИЛОТОВ" color={C.accent} />
+        <StatChip value="34.521" label="ЛУЧШИЙ КРУГ" color={C.green} />
+        <StatChip value="18" label="КРУГОВ" color={C.blue} />
+        <StatChip value="Иванов" label="ПОБЕДИТЕЛЬ" color={C.accent} />
+      </div>
+      <Card title="Итоговая классификация">
+        <div style={{ overflowX: 'auto', borderRadius: 10, border: `1px solid ${C.border}` }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead><tr>
+              <TH>#</TH><TH>Пилот</TH><TH>Карт</TH><TH>Кругов</TH>
+              <TH>Лучший круг</TH><TH>Средний темп</TH><TH>Разрыв</TH><TH right>Δ</TH>
+            </tr></thead>
+            <tbody>
+              {RESULTS.map((r, i) => (
+                <tr key={r.driver} style={{ background: i%2 ? 'rgba(255,255,255,0.01)' : 'transparent' }}>
+                  <TD style={{ color: '#3e4060', fontWeight: 700, boxShadow: PODIUM[r.pos] ? `inset 3px 0 0 ${PODIUM[r.pos]}` : 'none' }}>{r.pos}</TD>
+                  <TD>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: r.color, flexShrink: 0 }}></div>
+                      <span style={{ color: C.text, fontWeight: 600 }}>{r.driver}</span>
+                    </div>
+                  </TD>
+                  <TD style={{ color: C.dim }}>{r.kart}</TD>
+                  <TD style={{ color: C.dim }}>{r.laps}</TD>
+                  <TD style={{ color: i===0 ? C.green : C.text, fontWeight: i===0 ? 600 : 400 }}>{r.best}</TD>
+                  <TD style={{ color: i===RESULTS.length-1 ? C.accent : C.text }}>{r.avg}</TD>
+                  <TD style={{ color: C.dim, fontSize: 12 }}>{r.gap}</TD>
+                  <TD right><Delta val={r.delta} /></TD>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function DriverCard({ r }) {
+  const color = SCORE_COLOR(r.score);
+  const metrics = [
+    { label:'Темп', pct:30, val:Math.min(100,Math.round(r.score*1.05)), color:'#4caf50' },
+    { label:'Лучший круг', pct:20, val:Math.min(100,Math.round(r.score*0.98)), color:'#4fc3f7' },
+    { label:'Стабильность', pct:25, val:Math.min(100,Math.round(r.score*0.92)), color:'#ffd54f' },
+    { label:'Мастерство', pct:15, val:Math.min(100,Math.round(r.score*0.88)), color:'#ff9800' },
+    { label:'Шины', pct:10, val:Math.min(100,Math.round(r.score*1.02)), color:'#ab47bc' },
+  ];
+  return (
+    <div style={{ background: C.cardAlt, border: `1px solid ${C.border}`, borderRadius: 14, padding: '18px 20px', borderTop: `2.5px solid ${color}` }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{r.driver}</div>
+          <div style={{ fontSize: 11, color: C.dim, marginTop: 2 }}>Карт #{r.kart}</div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: 28, fontWeight: 800, lineHeight: 1, color }}>{r.score}</div>
+          <div style={{ fontSize: 10, fontWeight: 600, color, letterSpacing: '0.04em', marginTop: 2 }}>{r.score>=80?'ОТЛИЧНО':r.score>=65?'ХОРОШО':r.score>=50?'СРЕДНЕ':'НИЖЕ СР.'}</div>
+        </div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {metrics.map(m => (
+          <div key={m.label}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+              <span style={{ fontSize: 11, color: C.dim }}>{m.label} <span style={{ color: '#252545' }}>({m.pct}%)</span></span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: m.color }}>{m.val}</span>
+            </div>
+            <div style={{ height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 99, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${m.val}%`, background: m.color, borderRadius: 99, opacity: 0.9 }}></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function OverallTab() {
+  return (
+    <div className="fadein">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 12 }}>
+        {RESULTS.map(r => <DriverCard key={r.driver} r={r} />)}
+      </div>
+    </div>
+  );
+}
+
+function PaceTab() {
+  const bestAvg = 35.104;
+  return (
+    <div className="fadein">
+      <Card title="Средний темп">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {RESULTS.map((r,i) => {
+            const pct = Math.max(8, 100 - ((parseFloat(r.avg)-bestAvg)/bestAvg*100*25));
+            return (
+              <div key={r.driver} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: r.color, flexShrink:0 }}></div>
+                <span style={{ width: 80, fontSize: 13, color: C.dim, flexShrink:0 }}>{r.driver}</span>
+                <div style={{ flex: 1, height: 18, background: 'rgba(255,255,255,0.04)', borderRadius: 6, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${pct}%`, background: r.color, opacity: 0.75, borderRadius: 6 }}></div>
+                </div>
+                <span style={{ width: 52, fontSize: 12, color: C.text, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{r.avg}</span>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+const TABS = [
+  { id:'standings', label:'Итоги' },
+  { id:'pace',      label:'Темп' },
+  { id:'overall',   label:'Рейтинг пилотов' },
+];
+
+function AnalysisApp({ onBack }) {
+  const [tab, setTab] = React.useState('standings');
+  return (
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 24px' }}>
+      {/* Event bar */}
+      <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', marginBottom: 20, padding: '10px 16px', background: C.surface, borderRadius: 10, border: `1px solid ${C.border}`, fontSize: 12 }}>
+        {[['Дата','12.04.2024'],['Время','14:30'],['Событие','CityFight'],['Трасса','Lemans City'],['Категория','Любители']].map(([k,v]) => (
+          <span key={k}><span style={{ color: C.dim }}>{k}: </span><span style={{ color: C.text, fontWeight: 500 }}>{v}</span></span>
+        ))}
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 2, marginBottom: 24, borderBottom: `1px solid ${C.border}` }}>
+        {TABS.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            style={{
+              padding: '10px 18px', background: 'transparent', fontFamily: 'inherit',
+              color: tab===t.id ? C.text : C.dim,
+              border: 'none', borderBottom: `2px solid ${tab===t.id ? C.accent : 'transparent'}`,
+              fontSize: 13, fontWeight: tab===t.id ? 600 : 400, cursor: 'pointer',
+              transition: 'all 0.15s', marginBottom: -1,
+            }}>{t.label}</button>
+        ))}
+      </div>
+
+      {tab === 'standings' && <StandingsTab />}
+      {tab === 'pace'      && <PaceTab />}
+      {tab === 'overall'   && <OverallTab />}
+    </div>
+  );
+}
+
+/* ── APP ROOT ────────────────────────────────────────── */
+function App() {
+  const [screen, setScreen] = React.useState('upload');
+  return (
+    <div>
+      <Header
+        showBack={screen === 'app'} onBack={() => setScreen('upload')}
+        subtitle={screen === 'app' ? 'CityFight · Lemans City · 12.04.2024' : null}
+      />
+      {screen === 'upload'
+        ? <UploadScreen onAnalyze={() => setScreen('app')} />
+        : <AnalysisApp onBack={() => setScreen('upload')} />
+      }
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

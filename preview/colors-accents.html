@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #111118;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.section-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #3a3a5c;
+  margin-bottom: -16px;
+}
+
+/* Token list (same style as base colors) */
+.token-list { display: flex; flex-direction: column; gap: 1px; }
+.token-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.token-row:last-child { border-bottom: none; }
+.token-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.token-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #c8d0e0;
+  flex: 1;
+}
+.token-desc {
+  font-size: 11px;
+  color: #3e4060;
+  flex: 2;
+}
+.token-hex {
+  font-size: 11px;
+  color: #4a506a;
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+  letter-spacing: 0.04em;
+}
+
+/* Gradient title specimen */
+.gradient-specimen {
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 10px;
+  background: #16182a;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.specimen-title {
+  font-size: 22px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #e94560 0%, #ff9800 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.2;
+}
+.gradient-bar {
+  height: 4px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #e94560 0%, #ff9800 100%);
+}
+.gradient-stops {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: -4px;
+}
+.stop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.stop-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #16182a;
+}
+.stop-label { font-size: 10px; color: #4a506a; font-family: monospace; }
+</style></head>
+<body>
+
+<div class="section-label">Accent palette</div>
+<div class="token-list">
+  <div class="token-row">
+    <div class="token-dot" style="background:#e94560;"></div>
+    <span class="token-name">--accent</span>
+    <span class="token-desc">CTA · active tab · worst value</span>
+    <span class="token-hex">#e94560</span>
+  </div>
+  <div class="token-row">
+    <div class="token-dot" style="background:#4fc3f7;"></div>
+    <span class="token-name">--accent-blue</span>
+    <span class="token-desc">Card headings · hover state</span>
+    <span class="token-hex">#4fc3f7</span>
+  </div>
+  <div class="token-row">
+    <div class="token-dot" style="background:#4caf50;"></div>
+    <span class="token-name">--accent-green</span>
+    <span class="token-desc">Best lap · gain · success</span>
+    <span class="token-hex">#4caf50</span>
+  </div>
+  <div class="token-row">
+    <div class="token-dot" style="background:#ffd54f; border-color:rgba(255,255,255,0.08);"></div>
+    <span class="token-name">--accent-yellow</span>
+    <span class="token-desc">Warning · local badge · avg tier</span>
+    <span class="token-hex">#ffd54f</span>
+  </div>
+  <div class="token-row">
+    <div class="token-dot" style="background:#ff9800;"></div>
+    <span class="token-name">--accent-orange</span>
+    <span class="token-desc">Degradation · gradient end</span>
+    <span class="token-hex">#ff9800</span>
+  </div>
+  <div class="token-row">
+    <div class="token-dot" style="background:#ab47bc;"></div>
+    <span class="token-name">--accent-purple</span>
+    <span class="token-desc">Tire management · driver 6</span>
+    <span class="token-hex">#ab47bc</span>
+  </div>
+</div>
+
+<div class="section-label">Title gradient</div>
+<div class="gradient-specimen">
+  <div class="specimen-title">Kart Race Analyzer</div>
+  <div>
+    <div class="gradient-bar"></div>
+    <div class="gradient-stops">
+      <div class="stop">
+        <div class="stop-dot" style="background:#e94560;"></div>
+        <span class="stop-label">#e94560 · 0%</span>
+      </div>
+      <div class="stop">
+        <div class="stop-dot" style="background:#ff9800;"></div>
+        <span class="stop-label">100% · #ff9800</span>
+      </div>
+    </div>
+  </div>
+  <div style="font-size:11px; color:#3e4060; line-height:1.5;">
+    linear-gradient(135°) clipped to text · used only on the page <code style="color:#4a506a; font-family:monospace;">h1</code>
+  </div>
+</div>
+
+</body>
+</html>
