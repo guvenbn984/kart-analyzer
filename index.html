@@ -10,37 +10,58 @@
 <link rel="stylesheet" href="colors_and_type.css">
 <style>
 :root {
-  --bg: #0c0c14;
-  --bg-card: #18182a;
-  --bg-card-alt: #13131f;
-  --text: #d8dce8;
-  --text-dim: #6b7491;
-  --accent: #e94560;
-  --accent-green: #4caf50;
-  --accent-blue: #4fc3f7;
-  --accent-yellow: #ffd54f;
-  --accent-orange: #ff9800;
-  --border: rgba(255,255,255,0.07);
-  --radius: 14px;
-  --shadow: 0 4px 20px rgba(0,0,0,0.5);
+  --bg:          #07070f;
+  --bg-card:     rgba(255,255,255,0.09);
+  --bg-card-alt: rgba(255,255,255,0.06);
+  --text:        #f0f0f8;
+  --text-dim:    rgba(240,240,248,0.60);
+  --accent:        #ff375f;
+  --accent-green:  #30d158;
+  --accent-blue:   #0a84ff;
+  --accent-yellow: #ffd60a;
+  --accent-orange: #ff9f0a;
+  --border:  rgba(255,255,255,0.16);
+  --border2: rgba(255,255,255,0.26);
+  --radius: 16px;
+  --shadow: 0 8px 32px rgba(0,0,0,0.6);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+html, body { height: 100%; }
+
 body {
-  font-family: 'DM Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
+
+/* Mesh ambient gradient */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 10% 0%,   rgba(255,55,95,0.12)  0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 90% 100%,  rgba(10,132,255,0.16) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 60% at 50% 50%,   rgba(255,159,10,0.08) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+body > * { position: relative; z-index: 1; }
 
 /* Header */
 .header {
-  background: var(--bg-card-alt);
-  border-bottom: 1px solid var(--border);
-  padding: 0 28px;
+  background: rgba(7,7,15,0.80);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-bottom: 1px solid var(--border2);
+  padding: 0 24px;
   height: 56px;
   display: flex;
   align-items: center;
@@ -54,7 +75,8 @@ body {
 .header h1 {
   font-size: 17px;
   font-weight: 800;
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-orange) 100%);
+  letter-spacing: -0.01em;
+  background: linear-gradient(90deg, var(--accent) 0%, var(--accent-orange) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -81,24 +103,26 @@ body {
 
 .upload-zone {
   background: var(--bg-card);
-  border: 1.5px dashed var(--border);
+  border: 1.5px dashed var(--border2);
   border-radius: var(--radius);
   padding: 28px 20px;
   text-align: center;
   cursor: pointer;
   transition: all 0.2s;
   position: relative;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .upload-zone:hover, .upload-zone.dragover {
   border-color: var(--accent);
-  background: rgba(233, 69, 96, 0.04);
+  background: rgba(255, 55, 95, 0.06);
 }
 
 .upload-zone.loaded {
   border-color: var(--accent-green);
   border-style: solid;
-  background: rgba(76, 175, 80, 0.04);
+  background: rgba(48, 209, 88, 0.06);
 }
 
 .upload-zone input[type="file"] {
@@ -171,10 +195,10 @@ body {
 .tabs {
   display: flex;
   gap: 4px;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
   overflow-x: auto;
   padding-bottom: 4px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border2);
 }
 
 .tab-btn {
@@ -195,7 +219,7 @@ body {
 .tab-btn:hover { color: var(--text); }
 
 .tab-btn.active {
-  color: var(--text);
+  color: rgba(240,240,248,0.9);
   font-weight: 600;
   border-bottom-color: var(--accent);
 }
@@ -209,7 +233,9 @@ body {
   border-radius: var(--radius);
   padding: 20px;
   margin-bottom: 20px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border2);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .card h3 {
@@ -229,25 +255,30 @@ body {
 }
 
 .summary-card {
-  background: var(--bg-card-alt);
-  border-radius: 12px;
-  padding: 14px 18px;
-  border: 1px solid var(--border);
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  border: 1px solid var(--border2);
+  flex: 1;
+  min-width: 110px;
 }
 
 .summary-card .value {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 800;
   color: var(--accent);
   line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 
 .summary-card .label {
   font-size: 11px;
-  color: var(--text-dim);
-  margin-top: 5px;
+  color: rgba(240,240,248,0.62);
+  margin-top: 7px;
   font-weight: 500;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 /* Tables */
@@ -262,16 +293,16 @@ table {
 }
 
 thead th {
-  background: var(--bg-card-alt);
-  padding: 10px 14px;
+  background: rgba(255,255,255,0.10);
+  padding: 11px 16px;
   text-align: left;
   font-weight: 600;
   font-size: 11px;
-  color: #5a6a90;
-  letter-spacing: 0.06em;
+  color: rgba(240,240,248,0.55);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border2);
 }
 
 thead th.sortable {
@@ -283,37 +314,38 @@ thead th.sortable:hover { color: #8898c0; }
 thead th.sort-active { color: var(--accent-blue); }
 
 tbody td {
-  padding: 11px 14px;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  padding: 13px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
   white-space: nowrap;
   vertical-align: middle;
+  font-size: 13px;
 }
 
-tbody tr:nth-child(even) { background: rgba(255,255,255,0.01); }
-tbody tr:hover { background: rgba(79, 195, 247, 0.04); }
+tbody tr:nth-child(even) { background: rgba(255,255,255,0.015); }
+tbody tr:hover { background: rgba(255,55,95,0.04); }
 
 /* Position delta pills */
 .pos-up {
-  display: inline-flex; align-items: center; gap: 3px;
+  display: inline-flex; align-items: center; gap: 2px;
   padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 700;
-  background: rgba(76,175,80,0.12); color: #4caf50;
+  background: rgba(48,209,88,0.12); color: #30d158;
 }
 .pos-down {
-  display: inline-flex; align-items: center; gap: 3px;
+  display: inline-flex; align-items: center; gap: 2px;
   padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 700;
-  background: rgba(233,69,96,0.12); color: #e94560;
+  background: rgba(255,55,95,0.20); color: #ff375f;
 }
 .pos-same {
   display: inline-flex; align-items: center;
   padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 700;
-  background: rgba(107,116,145,0.10); color: #4a506a;
+  background: rgba(255,255,255,0.10); color: rgba(240,240,248,0.45);
 }
 .best-val { color: var(--accent-green); font-weight: 600; }
 .worst-val { color: var(--accent); }
 
-.podium-1 td:first-child { box-shadow: inset 3px 0 0 gold; }
-.podium-2 td:first-child { box-shadow: inset 3px 0 0 silver; }
-.podium-3 td:first-child { box-shadow: inset 3px 0 0 #cd7f32; }
+.podium-1 { border-left: 3px solid #ffd700; }
+.podium-2 { border-left: 3px solid #c0c0c0; }
+.podium-3 { border-left: 3px solid #cd7f32; }
 
 /* Driver checkboxes */
 .driver-checkboxes {
@@ -428,10 +460,10 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.04); }
   gap: 20px;
   flex-wrap: wrap;
   margin-bottom: 20px;
-  padding: 10px 16px;
-  background: var(--bg-card-alt);
-  border-radius: 10px;
-  border: 1px solid var(--border);
+  padding: 10px 18px;
+  background: rgba(255,255,255,0.09);
+  border-radius: 12px;
+  border: 1px solid var(--border2);
   font-size: 12px;
 }
 
@@ -496,17 +528,17 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.04); }
   display: flex;
   align-items: center;
   gap: 12px;
-  background: var(--bg-card-alt);
+  background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 12px 16px;
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .history-item:hover {
-  border-color: rgba(79,195,247,0.2);
-  background: var(--bg-card);
+  border-color: var(--border2);
+  background: rgba(255,255,255,0.12);
 }
 
 .history-item .hi-icon {
@@ -617,20 +649,20 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.04); }
 }
 
 .driver-rating-card {
-  background: var(--bg-card-alt);
-  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.09);
+  border: 1px solid var(--border2);
   border-radius: var(--radius);
-  padding: 18px 20px;
+  padding: 20px;
   position: relative;
   overflow: hidden;
-  /* border-top stripe applied inline via JS */
+  /* border-top stripe + box-shadow applied inline via JS */
 }
 
 .driver-rating-card .drc-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  gap: 14px;
+  margin-bottom: 14px;
 }
 
 .driver-rating-card .drc-name {
@@ -663,8 +695,8 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.04); }
 
 .driver-rating-card .drc-bar {
   flex: 1;
-  height: 4px;
-  background: rgba(255,255,255,0.05);
+  height: 3px;
+  background: rgba(255,255,255,0.22);
   border-radius: 99px;
   overflow: hidden;
 }
@@ -672,8 +704,7 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.04); }
 .driver-rating-card .drc-bar-fill {
   height: 100%;
   border-radius: 99px;
-  transition: width 0.5s ease;
-  opacity: 0.9;
+  transition: width 0.6s cubic-bezier(0.2,0,0,1);
 }
 
 .driver-rating-card .drc-bar-val {
@@ -692,19 +723,19 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.04); }
   padding-top: 8px;
 }
 
-.score-excellent { color: #4caf50; }
-.score-good { color: #8bc34a; }
-.score-average { color: #ffd54f; }
-.score-below { color: #ff9800; }
-.score-poor { color: #e94560; }
+.score-excellent { color: #30d158; }
+.score-good      { color: #9fe870; }
+.score-average   { color: #ffd60a; }
+.score-below     { color: #ff9f0a; }
+.score-poor      { color: #ff375f; }
 
 /* Session config (race count + pit stops) */
 .session-config {
   margin: 16px 0;
   padding: 14px 18px;
-  background: var(--bg-card-alt);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
   display: flex;
   flex-wrap: wrap;
   gap: 28px;
@@ -748,19 +779,19 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.04); }
 /* History filter input */
 .history-filter-input {
   width: 100%;
-  background: var(--bg-card-alt);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 9px 14px;
+  background: rgba(255,255,255,0.10);
+  color: rgba(240,240,248,0.85);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 10px 16px;
   font-size: 13px;
   font-family: inherit;
   margin-bottom: 10px;
   outline: none;
   transition: border-color 0.15s;
 }
-.history-filter-input:focus { border-color: rgba(79,195,247,0.35); }
-.history-filter-input::placeholder { color: var(--text-dim); }
+.history-filter-input:focus { border-color: rgba(255,55,95,0.4); }
+.history-filter-input::placeholder { color: rgba(240,240,248,0.35); }
 
 /* Driver visibility toggle pills */
 .driver-visibility-wrap {
@@ -855,11 +886,11 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.04); }
   .summary-card .value { color: #c0304a !important; }
   .summary-card .label { color: #666 !important; }
 
-  .best-val { color: #2e7d32 !important; }
+  .best-val { color: #1a7a35 !important; }
   .worst-val { color: #c0304a !important; }
 
-  .pos-up   { background: rgba(46,125,50,0.1) !important; color: #2e7d32 !important; }
-  .pos-down { background: rgba(192,48,74,0.1) !important; color: #c0304a !important; }
+  .pos-up   { background: rgba(26,122,53,0.1)  !important; color: #1a7a35 !important; }
+  .pos-down { background: rgba(192,48,74,0.1)  !important; color: #c0304a !important; }
   .pos-same { background: #f0f0f0 !important; color: #666 !important; }
 
   .chart-container { break-inside: avoid; max-height: 280px; }
@@ -2030,17 +2061,17 @@ async function computeOverallRatings() {
 
 function renderRatingCard(r, showRacesInfo = false) {
   const bars = [
-    { label: 'Темп', value: r.paceScore, color: '#4caf50' },
-    { label: 'Лучший круг', value: r.bestLapScore, color: '#4fc3f7' },
-    { label: 'Стабильность', value: r.consistencyScore, color: '#ffd54f' },
-    ...(r.hasQuali ? [{ label: 'Мастерство', value: r.raceCraftScore, color: '#ff9800' }] : []),
-    { label: 'Шины', value: r.degradationScore, color: '#ab47bc' },
+    { label: 'Темп',        value: r.paceScore,        color: '#30d158' },
+    { label: 'Лучший круг', value: r.bestLapScore,     color: '#0a84ff' },
+    { label: 'Стабильность',value: r.consistencyScore, color: '#ffd60a' },
+    ...(r.hasQuali ? [{ label: 'Мастерство', value: r.raceCraftScore, color: '#ff9f0a' }] : []),
+    { label: 'Шины',        value: r.degradationScore, color: '#bf5af2' },
   ];
   const barsHtml = bars.map(b => `
     <div class="drc-bar-row">
       <span class="drc-bar-label">${b.label}</span>
-      <div class="drc-bar"><div class="drc-bar-fill" style="width:${b.value}%;background:${b.color}"></div></div>
-      <span class="drc-bar-val">${b.value}</span>
+      <div class="drc-bar"><div class="drc-bar-fill" style="width:${b.value}%;background:${b.color};box-shadow:0 0 6px ${b.color}60"></div></div>
+      <span class="drc-bar-val" style="color:${b.color}">${b.value}</span>
     </div>
   `).join('');
 
@@ -2060,18 +2091,38 @@ function renderRatingCard(r, showRacesInfo = false) {
        </div>`
     : '';
 
-  const scoreColor = r.scoreClass === 'score-excellent' ? '#4caf50'
-    : r.scoreClass === 'score-good' ? '#8bc34a'
-    : r.scoreClass === 'score-average' ? '#ffd54f'
-    : r.scoreClass === 'score-below' ? '#ff9800'
-    : '#e94560';
+  const scoreColor = r.scoreClass === 'score-excellent' ? '#30d158'
+    : r.scoreClass === 'score-good' ? '#9fe870'
+    : r.scoreClass === 'score-average' ? '#ffd60a'
+    : r.scoreClass === 'score-below' ? '#ff9f0a'
+    : '#ff375f';
 
-  return `<div class="driver-rating-card" style="border-top: 2.5px solid ${scoreColor}">
-    <div class="drc-header">
-      <span class="drc-name">${header}</span>
-      <div style="text-align:right">
-        <span class="drc-score ${r.scoreClass}">${r.total}</span>
-        <div style="font-size:10px;font-weight:600;color:${scoreColor};letter-spacing:0.04em;margin-top:2px">${r.scoreClass === 'score-excellent' ? 'ОТЛИЧНО' : r.scoreClass === 'score-good' ? 'ХОРОШО' : r.scoreClass === 'score-average' ? 'СРЕДНЕ' : r.scoreClass === 'score-below' ? 'НИЖЕ СР.' : 'СЛАБО'}</div>
+  const tierLabel = r.scoreClass === 'score-excellent' ? 'ОТЛИЧНО'
+    : r.scoreClass === 'score-good' ? 'ХОРОШО'
+    : r.scoreClass === 'score-average' ? 'СРЕДНЕ'
+    : r.scoreClass === 'score-below' ? 'НИЖЕ СР.' : 'СЛАБО';
+
+  // SVG arc score ring
+  const arcSize = 60, arcR = arcSize / 2 - 6;
+  const arcCirc = 2 * Math.PI * arcR;
+  const arcDash  = arcCirc * (r.total / 100);
+  const arcSvg = `<svg width="${arcSize}" height="${arcSize}" style="transform:rotate(-90deg);flex-shrink:0">
+    <circle cx="${arcSize/2}" cy="${arcSize/2}" r="${arcR}" fill="none" stroke="rgba(255,255,255,0.20)" stroke-width="5"/>
+    <circle cx="${arcSize/2}" cy="${arcSize/2}" r="${arcR}" fill="none" stroke="${scoreColor}" stroke-width="5"
+      stroke-dasharray="${arcDash.toFixed(1)} ${arcCirc.toFixed(1)}" stroke-linecap="round"
+      style="filter:drop-shadow(0 0 4px ${scoreColor}80)"/>
+  </svg>`;
+
+  return `<div class="driver-rating-card" style="border-top:2px solid ${scoreColor};box-shadow:0 0 28px ${scoreColor}10">
+    <div class="drc-header" style="align-items:center;gap:14px">
+      ${arcSvg}
+      <div style="flex:1;min-width:0">
+        <div class="drc-name">${header}</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:1px">Карт #${r.kart || '—'}</div>
+        <div style="display:flex;align-items:baseline;gap:6px;margin-top:4px">
+          <span class="drc-score ${r.scoreClass}">${r.total}</span>
+          <span style="font-size:10px;font-weight:600;color:${scoreColor};letter-spacing:0.04em">${tierLabel}</span>
+        </div>
       </div>
     </div>
     ${extra}
