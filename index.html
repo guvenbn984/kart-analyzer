@@ -623,6 +623,52 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
 .score-below { color: #ff9800; }
 .score-poor { color: #e94560; }
 
+/* Session config (race count + pit stops) */
+.session-config {
+  margin: 16px 0;
+  padding: 14px 18px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: center;
+}
+.sc-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.sc-label {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.sc-options {
+  display: flex;
+  gap: 5px;
+}
+.sc-btn {
+  padding: 5px 14px;
+  background: var(--bg-card-alt);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+.sc-btn:hover { border-color: var(--accent-blue); color: var(--text); }
+.sc-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
 /* History filter input */
 .history-filter-input {
   width: 100%;
@@ -713,6 +759,24 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
       <div class="hint">Перетащите PDF или нажмите</div>
       <div class="filename" id="raceFilename"></div>
       <input type="file" accept=".pdf" id="raceInput">
+    </div>
+  </div>
+  <div class="session-config" id="sessionConfig">
+    <div class="sc-group">
+      <span class="sc-label">Гонок в этот день:</span>
+      <div class="sc-options" id="scRaces">
+        <button class="sc-btn active" data-val="1">1</button>
+        <button class="sc-btn" data-val="2">2</button>
+        <button class="sc-btn" data-val="3">3</button>
+      </div>
+    </div>
+    <div class="sc-group">
+      <span class="sc-label">Питстопов в гонке:</span>
+      <div class="sc-options" id="scPits">
+        <button class="sc-btn" data-val="0">0</button>
+        <button class="sc-btn active" data-val="1">1</button>
+        <button class="sc-btn" data-val="2">2</button>
+      </div>
     </div>
   </div>
   <button class="btn-analyze" id="btnAnalyze" disabled>Анализировать</button>
@@ -879,6 +943,9 @@ try {
 let qualiFile = null;
 let raceFile = null;
 let parsedData = { qualification: null, race: null, qualiLaps: null, raceLaps: null, meta: {} };
+
+// Session config (set by the radio buttons in the upload section)
+const sessionCfg = { racesPerDay: 1, pitStopsPerRace: 1 };
 const charts = {};
 const STORAGE_KEY = 'kartAnalyzerHistory';
 const HIDDEN_DRIVERS_KEY = 'kartAnalyzerHiddenDrivers';
@@ -2414,6 +2481,38 @@ function renderHeatmap(lapData) {
 // ===== Kart & Pit Stop Analysis =====
 const PIT_CONFIG_KEY = 'kartAnalyzerPitConfig';
 
+// Detect up to numStops pit laps (anomalously long laps) and split into stints.
+// Returns { pitLaps: [{lapNum,lapIdx,lapTime}], stints: [laps[]] }
+function detectPitStops(lapTimes, numStops) {
+  const valid = lapTimes
+    .map((t, i) => ({ time: t, idx: i }))
+    .filter(l => l.time != null && l.time > 0 && l.idx >= 1);
+  if (valid.length < 5) return { pitLaps: [], stints: [valid.map(l => l.time)] };
+
+  const med = median(valid.map(l => l.time));
+  const pitThreshold = Math.max(med * 1.5, med + 20);
+
+  // Take the first numStops anomalous laps as pit laps
+  const candidates = valid.filter(l => l.time > pitThreshold).slice(0, numStops);
+
+  const pitIdxSet = new Set(candidates.map(p => p.idx));
+  const clean = valid.filter(l => !pitIdxSet.has(l.idx) && !isOutlierLap(l.time, med));
+
+  // Split clean laps into (numStops + 1) stints around the pit laps
+  const splitPoints = [-1, ...candidates.map(p => p.idx), Infinity];
+  const stints = [];
+  for (let i = 0; i < splitPoints.length - 1; i++) {
+    const from = splitPoints[i], to = splitPoints[i + 1];
+    stints.push(clean.filter(l => l.idx > from && l.idx < to).map(l => l.time));
+  }
+
+  return {
+    pitLaps: candidates.map(p => ({ lapNum: p.idx + 1, lapIdx: p.idx, lapTime: p.time })),
+    stints,
+  };
+}
+
+// Keep old single-stop alias for any callers outside karts tab
 function detectPitStop(lapTimes) {
   // A pit lap is an anomalously long lap: driver slows, enters pit lane,
   // switches karts (~30-60 s extra), exits. Threshold: >50% above driver median.
@@ -2460,19 +2559,35 @@ function stintDeg(laps) {
 // pitOrder: driver names sorted by pit lap (earliest first)
 // startingKarts: { driver -> kartNr string }
 // pk1: pit kart closest to exit, pk2: second pit kart
-// Returns: { driver -> { k1: startKart, k2: kartAfterPit } }
-function simulateKartQueue(pitOrder, startingKarts, pk1, pk2) {
-  const asgn = {};
-  for (const [d, k] of Object.entries(startingKarts)) asgn[d] = { k1: k, k2: null };
-  if (!pk1 || !pk2) return asgn;
+// Simulate FIFO kart queue for any number of pit stops.
+// allEvents: [{ driver, lapIdx }] — ALL pit events across ALL drivers, sorted chronologically.
+// Returns: { driver -> [kartStint0, kartStint1, kartStint2, ...] }
+function simulateKartQueueMultiStop(allEvents, startingKarts, pk1, pk2) {
+  const currentKart = {};
+  const history = {};
+  for (const [d, k] of Object.entries(startingKarts)) {
+    currentKart[d] = String(k || '?');
+    history[d] = [String(k || '?')];
+  }
+  if (!pk1 || !pk2) return history;
 
   const queue = [String(pk1), String(pk2)];
-  for (const driver of pitOrder) {
-    if (!asgn[driver]) continue;
-    const fresh = queue.shift();          // driver gets first available kart
-    queue.push(asgn[driver].k1);          // their old kart joins the back of queue
-    asgn[driver].k2 = fresh;
+  for (const { driver } of allEvents) {
+    if (currentKart[driver] == null) continue;
+    const newKart = queue.shift() || '?';
+    queue.push(currentKart[driver]);     // old kart goes to back of queue
+    currentKart[driver] = newKart;
+    history[driver].push(newKart);
   }
+  return history;
+}
+
+// Legacy single-stop wrapper
+function simulateKartQueue(pitOrder, startingKarts, pk1, pk2) {
+  const events = pitOrder.map(d => ({ driver: d, lapIdx: 0 }));
+  const hist = simulateKartQueueMultiStop(events, startingKarts, pk1, pk2);
+  const asgn = {};
+  for (const [d, arr] of Object.entries(hist)) asgn[d] = { k1: arr[0], k2: arr[1] || null };
   return asgn;
 }
 
@@ -2485,21 +2600,33 @@ function renderKartsTab() {
     return;
   }
 
-  // Build starting-kart map from race results
+  // Number of pit stops comes from meta (set during upload config)
+  const numStops = parsedData.meta?.pitStopsPerRace ?? 1;
+  const numStints = numStops + 1;
+
   const raceResults = parsedData.race?.results || [];
   const startingKarts = {};
   for (const r of raceResults) startingKarts[r.driver] = r.kartNumber ? String(r.kartNumber) : '?';
 
   const drivers = Object.keys(lapData);
 
-  // Detect pit stop for every driver
+  // Detect pit stops for every driver using the configured numStops
   const pits = {};
-  for (const d of drivers) pits[d] = detectPitStop(lapData[d]);
+  for (const d of drivers) pits[d] = detectPitStops(lapData[d], numStops);
 
-  // Order drivers by pit lap (earliest first)
-  const pitOrder = drivers
-    .filter(d => pits[d])
-    .sort((a, b) => pits[a].pitLapNum - pits[b].pitLapNum);
+  // Build all pit events across all drivers, sorted chronologically for queue sim
+  const allPitEvents = [];
+  for (const d of drivers) {
+    for (const pl of (pits[d]?.pitLaps || [])) allPitEvents.push({ driver: d, lapIdx: pl.lapIdx });
+  }
+  allPitEvents.sort((a, b) => a.lapIdx - b.lapIdx);
+
+  // Pit order: first stop of each driver (for display)
+  const firstPit = {};
+  for (const d of drivers) {
+    if (pits[d]?.pitLaps?.length) firstPit[d] = pits[d].pitLaps[0].lapNum;
+  }
+  const pitOrder = Object.keys(firstPit).sort((a, b) => firstPit[a] - firstPit[b]);
 
   // Load saved pit kart config
   let cfg = {};
@@ -2508,61 +2635,49 @@ function renderKartsTab() {
   const pk2 = (cfg.pitKart2 || '').toString().trim();
   const hasConfig = !!(pk1 && pk2);
 
-  // Simulate kart assignments
-  const asgn = simulateKartQueue(pitOrder, startingKarts, pk1, pk2);
+  // Simulate kart history per driver (multi-stop capable)
+  const kartHistory = simulateKartQueueMultiStop(allPitEvents, startingKarts, pk1, pk2);
 
-  // Build per-driver stint data
+  // Build per-driver stint data (dynamic: numStints stints per driver)
   const driverStints = drivers.map(driver => {
-    const pit  = pits[driver];
-    const allClean = lapData[driver].filter(t => t != null && t > 0 && !isOutlierLap(t, median(lapData[driver].filter(x => x > 0))));
-    const s1Laps = pit ? pit.stint1 : allClean;
-    const s2Laps = pit ? pit.stint2 : [];
-    const { k1, k2 } = asgn[driver] || {};
-    const s1avg = stintAvg(s1Laps);
-    const s2avg = stintAvg(s2Laps);
-    const delta = (s1avg && s2avg) ? ((s2avg - s1avg) / s1avg * 100) : null;
-    return {
-      driver,
-      k1: k1 || '?',
-      k2: k2 || (pit ? '?' : null),
-      pitLapNum: pit?.pitLapNum ?? null,
-      pitLapTime: pit?.pitLapTime ?? null,
-      s1Laps, s2Laps, s1avg, s2avg,
-      s1deg: stintDeg(s1Laps),
-      s2deg: stintDeg(s2Laps),
-      delta,
-    };
-  }).sort((a, b) => (a.pitLapNum ?? 9999) - (b.pitLapNum ?? 9999));
+    const pit = pits[driver] || { pitLaps: [], stints: [] };
+    const karts = kartHistory[driver] || [startingKarts[driver] || '?'];
+    // Pad stints to numStints (in case driver didn't complete all detected stops)
+    const stints = [...pit.stints];
+    while (stints.length < numStints) stints.push([]);
+    const stintAvgs_ = stints.map(stintAvg);
+    const stintDegs_ = stints.map(stintDeg);
+    const first = stintAvgs_.find(a => a != null);
+    const last  = [...stintAvgs_].reverse().find(a => a != null);
+    const deltaTotal = first && last && first !== last ? ((last - first) / first * 100) : null;
+    return { driver, karts, pitLaps: pit.pitLaps, stints, stintAvgs: stintAvgs_, stintDegs: stintDegs_, deltaTotal };
+  }).sort((a, b) => (a.pitLaps[0]?.lapNum ?? 9999) - (b.pitLaps[0]?.lapNum ?? 9999));
 
   // Build per-kart performance map
-  const kartMap = {}; // kartNr -> [{ driver, stintNum, laps, avg, best, deg }]
+  const kartMap = {};
   if (hasConfig) {
     for (const ds of driverStints) {
-      const addStint = (kNr, stintNum, laps) => {
-        if (!kNr || kNr === '?' || !laps.length) return;
+      ds.karts.forEach((kNr, si) => {
+        if (!kNr || kNr === '?' || !ds.stints[si]?.length) return;
         if (!kartMap[kNr]) kartMap[kNr] = [];
         kartMap[kNr].push({
-          driver: ds.driver, stintNum, laps,
-          avg: stintAvg(laps),
-          best: Math.min(...laps),
-          deg: stintDeg(laps),
+          driver: ds.driver, stintNum: si + 1, laps: ds.stints[si],
+          avg: stintAvg(ds.stints[si]),
+          best: Math.min(...ds.stints[si]),
+          deg: stintDeg(ds.stints[si]),
         });
-      };
-      addStint(ds.k1, 1, ds.s1Laps);
-      if (ds.pitLapNum) addStint(ds.k2, 2, ds.s2Laps);
+      });
     }
   }
 
-  // Track evolution: field median per lap number (exclude pit laps)
+  // Track evolution: field median per lap, excluding all pit laps
   const lapMedians = {};
   for (const d of drivers) {
-    const pit = pits[d];
+    const pitIdxSet = new Set((pits[d]?.pitLaps || []).map(p => p.lapIdx));
     lapData[d].forEach((t, i) => {
-      if (t == null || t <= 0 || i === 0) return;
-      if (pit && i === pit.pitLapIdx) return; // exclude pit lap
-      const lapNum = i + 1;
-      if (!lapMedians[lapNum]) lapMedians[lapNum] = [];
-      lapMedians[lapNum].push(t);
+      if (t == null || t <= 0 || i === 0 || pitIdxSet.has(i)) return;
+      if (!lapMedians[i + 1]) lapMedians[i + 1] = [];
+      lapMedians[i + 1].push(t);
     });
   }
   const evolutionPoints = Object.entries(lapMedians)
@@ -2570,24 +2685,25 @@ function renderKartsTab() {
     .sort(([a], [b]) => +a - +b)
     .map(([lap, arr]) => ({ lap: +lap, med: median(arr) }));
 
-  // ── HTML helpers ──────────────────────────────────────────
+  // ── HTML helpers ──
+  const STINT_COLORS = ['var(--accent-blue)', 'var(--accent-yellow)', '#ab47bc', '#4caf50'];
   const degFmt = v => {
     if (v == null) return '—';
-    const style = v > 2 ? 'color:var(--accent)' : v > 0.8 ? 'color:var(--accent-yellow)' : 'color:var(--accent-green)';
-    return `<span style="${style}">${v > 0 ? '+' : ''}${v.toFixed(1)}%</span>`;
+    const s = v > 2 ? 'color:var(--accent)' : v > 0.8 ? 'color:var(--accent-yellow)' : 'color:var(--accent-green)';
+    return `<span style="${s}">${v > 0 ? '+' : ''}${v.toFixed(1)}%</span>`;
   };
-  const kartLabel = (k, col) => k && k !== '?' ? `<span style="color:${col};font-weight:600">К${k}</span>` : `<span style="color:var(--text-dim)">—</span>`;
 
   // ── 1. Config card ──
   const pitOrderStr = pitOrder.length
-    ? pitOrder.map(d => `${d.split(' ')[0]} (кр.${pits[d].pitLapNum})`).join(' → ')
+    ? pitOrder.map(d => `${d.split(' ')[0]}(кр.${firstPit[d]})`).join(' → ')
     : 'Питстопы не обнаружены';
 
   const configCard = `
 <div class="card">
   <h3>&#9881;&#65039; Конфигурация питстопов</h3>
   <p style="font-size:0.8rem;color:var(--text-dim);margin-bottom:14px;line-height:1.6">
-    Укажите номера картов, стоявших в питлейне в начале гонки. Система рассчитает очерёдность раздачи картов по правилу FIFO-очереди.
+    Укажите номера картов, стоявших в питлейне в начале гонки. Очерёдность раздачи рассчитывается по правилу FIFO.<br>
+    <span style="color:var(--accent-yellow)">&#9888; Питстопов в гонке: <strong>${numStops}</strong></span> — задаётся при загрузке файлов.
   </p>
   <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px">
     <label style="font-size:0.85rem">
@@ -2601,135 +2717,117 @@ function renderKartsTab() {
     <button id="applyPitCfg" style="padding:7px 20px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:0.85rem">Применить</button>
   </div>
   <div style="font-size:0.8rem">
-    <span style="color:var(--text-dim)">&#128681; Порядок питстопов: </span>
+    <span style="color:var(--text-dim)">&#128681; Порядок 1-го питстопа: </span>
     <span style="color:var(--text)">${pitOrderStr}</span>
   </div>
 </div>`;
 
-  // ── 2. Stint table ──
-  const stintRows = driverStints.map(d => {
-    const deltaStyle = d.delta == null ? '' : d.delta < -0.5 ? 'color:var(--accent-green)' : d.delta > 0.5 ? 'color:var(--accent)' : 'color:var(--text-dim)';
-    const deltaStr  = d.delta != null ? `${d.delta > 0 ? '+' : ''}${d.delta.toFixed(1)}%` : '—';
-    const pitCell   = d.pitLapNum
-      ? `Кр.&nbsp;<strong>${d.pitLapNum}</strong> <span style="color:var(--text-dim);font-size:0.73rem">(${formatTime(d.pitLapTime)})</span>`
-      : '<span style="color:var(--text-dim)">—</span>';
-    return `<tr>
-      <td><strong>${d.driver}</strong></td>
-      <td>${kartLabel(d.k1, 'var(--accent-blue)')}</td>
-      <td>${pitCell}</td>
-      <td>${d.s1Laps.length}</td>
-      <td>${d.s1avg ? formatTime(d.s1avg) : '—'}</td>
-      <td>${degFmt(d.s1deg)}</td>
-      <td>${d.pitLapNum ? kartLabel(d.k2, 'var(--accent-yellow)') : '<span style="color:var(--text-dim)">—</span>'}</td>
-      <td>${d.s2Laps.length || '—'}</td>
-      <td>${d.s2avg ? formatTime(d.s2avg) : '—'}</td>
-      <td>${degFmt(d.s2deg)}</td>
-      <td style="${deltaStyle};font-weight:${d.delta != null ? 600 : 400}">${deltaStr}</td>
-    </tr>`;
+  // ── 2. Dynamic stint table (columns adapt to numStops) ──
+  let headerCols = '<th>Пилот</th>';
+  for (let s = 0; s < numStints; s++) {
+    const col = STINT_COLORS[s] || 'var(--text)';
+    headerCols += `<th style="color:${col}">Карт С${s + 1}</th>`;
+    if (s < numStops) headerCols += `<th>Пит ${s + 1}</th>`;
+    headerCols += `<th>Кр.</th><th>Темп</th><th>Дег.</th>`;
+  }
+  if (numStops > 0) headerCols += '<th>Δ С1→Сn</th>';
+
+  const stintRows = driverStints.map(ds => {
+    let cells = `<td><strong>${ds.driver}</strong></td>`;
+    for (let s = 0; s < numStints; s++) {
+      const col = STINT_COLORS[s] || 'var(--text)';
+      const kNr = ds.karts[s];
+      cells += `<td>${kNr && kNr !== '?' ? `<span style="color:${col};font-weight:600">К${kNr}</span>` : '<span style="color:var(--text-dim)">?</span>'}</td>`;
+      if (s < numStops) {
+        const pl = ds.pitLaps[s];
+        cells += pl
+          ? `<td>Кр.<strong>${pl.lapNum}</strong> <span style="color:var(--text-dim);font-size:0.72rem">(${formatTime(pl.lapTime)})</span></td>`
+          : `<td><span style="color:var(--text-dim)">—</span></td>`;
+      }
+      cells += `<td>${ds.stints[s]?.length || '—'}</td>`;
+      cells += `<td>${ds.stintAvgs[s] ? formatTime(ds.stintAvgs[s]) : '—'}</td>`;
+      cells += `<td>${degFmt(ds.stintDegs[s])}</td>`;
+    }
+    if (numStops > 0) {
+      const dt = ds.deltaTotal;
+      const dStyle = dt == null ? '' : dt < -0.5 ? 'color:var(--accent-green)' : dt > 0.5 ? 'color:var(--accent)' : 'color:var(--text-dim)';
+      cells += `<td style="${dStyle};font-weight:${dt != null ? 600 : 400}">${dt != null ? `${dt > 0 ? '+' : ''}${dt.toFixed(1)}%` : '—'}</td>`;
+    }
+    return `<tr>${cells}</tr>`;
   }).join('');
 
   const stintCard = `
 <div class="card">
   <h3>&#127950; Стинты и питстопы пилотов</h3>
   <div class="table-wrap"><table>
-    <thead><tr>
-      <th>Пилот</th>
-      <th>Карт С1</th><th>Питстоп</th>
-      <th>С1 кр.</th><th>С1 темп</th><th>С1 деград.</th>
-      <th>Карт С2</th>
-      <th>С2 кр.</th><th>С2 темп</th><th>С2 деград.</th>
-      <th>Δ темп</th>
-    </tr></thead>
+    <thead><tr>${headerCols}</tr></thead>
     <tbody>${stintRows}</tbody>
   </table></div>
   <div style="font-size:0.75rem;color:var(--text-dim);margin-top:10px;line-height:1.5">
-    <strong>Δ темп</strong> — изменение среднего темпа после смены карта (−% = стал быстрее).
-    <strong>Деградация</strong> — изменение темпа от начала к концу стинта (меньше лучше).
-    ${!hasConfig ? '<br><span style="color:var(--accent-yellow)">&#9888; Укажите питкарты выше для определения номеров картов С2.</span>' : ''}
+    <strong>Δ</strong> — изменение темпа от первого стинта к последнему (−% = стал быстрее).
+    <strong>Дег.</strong> — деградация темпа внутри стинта.
+    ${!hasConfig ? '<br><span style="color:var(--accent-yellow)">&#9888; Укажите питкарты выше для определения номеров картов в С2+.</span>' : ''}
   </div>
 </div>`;
 
-  // ── 3. Stint chart card ──
-  const stintChartCard = pitOrder.length ? `
+  // ── 3. Stint comparison chart ──
+  const hasPits = driverStints.some(d => d.pitLaps.length > 0);
+  const stintChartCard = hasPits ? `
 <div class="card">
-  <h3>&#128200; Сравнение темпа: Стинт 1 vs Стинт 2</h3>
+  <h3>&#128200; Средний темп по стинтам</h3>
   <div class="chart-container"><canvas id="chartKartStints"></canvas></div>
 </div>` : '';
 
   // ── 4. Kart performance table ──
   let kartPerfCard = '';
   if (hasConfig && Object.keys(kartMap).length) {
-    // Sort karts: pit karts first, then by avg pace
-    const sortedKarts = Object.entries(kartMap).sort(([aNr, aS], [bNr, bS]) => {
-      const isPitA = aNr === pk1 || aNr === pk2 ? -1 : 1;
-      const isPitB = bNr === pk1 || bNr === pk2 ? -1 : 1;
-      if (isPitA !== isPitB) return isPitA - isPitB;
-      const avgA = stintAvg(aS.map(s => s.avg).filter(Boolean));
-      const avgB = stintAvg(bS.map(s => s.avg).filter(Boolean));
-      return (avgA || 999) - (avgB || 999);
-    });
+    const allKartAvgs = Object.values(kartMap)
+      .map(s => stintAvg(s.map(x => x.avg).filter(Boolean))).filter(Boolean);
+    const bestKA = allKartAvgs.length ? Math.min(...allKartAvgs) : 1;
+    const worstKA = allKartAvgs.length ? Math.max(...allKartAvgs) : 2;
 
-    // Best kart avg for relative rating bar
-    const allAvgs = sortedKarts.map(([, stints]) => stintAvg(stints.map(s => s.avg).filter(Boolean))).filter(Boolean);
-    const bestKartAvg = allAvgs.length ? Math.min(...allAvgs) : 1;
-    const worstKartAvg = allAvgs.length ? Math.max(...allAvgs) : 2;
-
-    const kartRows = sortedKarts.map(([kNr, stints]) => {
-      const allAvgsK  = stints.map(s => s.avg).filter(Boolean);
-      const totalAvg  = stintAvg(allAvgsK);
-      const bestLap   = Math.min(...stints.map(s => s.best).filter(v => isFinite(v)));
-      const degs      = stints.map(s => s.deg).filter(v => v != null);
-      const avgDeg    = degs.length ? degs.reduce((a, b) => a + b) / degs.length : null;
-      const totalLaps = stints.reduce((n, s) => n + s.laps.length, 0);
-      const driverList = [...new Set(stints.map(s => `${s.driver.split(' ')[0]} (С${s.stintNum})`))]
-        .join(', ');
-      const isPitKart = kNr === pk1 || kNr === pk2;
-
-      // Relative speed bar (higher = faster)
-      const speedPct = totalAvg && worstKartAvg > bestKartAvg
-        ? Math.round(((worstKartAvg - totalAvg) / (worstKartAvg - bestKartAvg)) * 100)
-        : 50;
-      const barColor = speedPct >= 70 ? '#4caf50' : speedPct >= 40 ? '#ffd54f' : '#e94560';
-
-      return `<tr>
-        <td>
-          <span style="color:var(--accent-blue);font-weight:700;font-size:1.05rem">К${kNr}</span>
-          ${isPitKart ? '<span style="font-size:0.7rem;color:var(--accent-yellow);margin-left:5px">питкарт</span>' : ''}
-        </td>
-        <td>
-          <div style="display:flex;align-items:center;gap:8px">
+    const kartRows = Object.entries(kartMap)
+      .sort(([, aS], [, bS]) => (stintAvg(aS.map(s => s.avg).filter(Boolean)) || 999) - (stintAvg(bS.map(s => s.avg).filter(Boolean)) || 999))
+      .map(([kNr, stints]) => {
+        const avgs = stints.map(s => s.avg).filter(Boolean);
+        const totalAvg = stintAvg(avgs);
+        const bestLap  = Math.min(...stints.map(s => s.best).filter(v => v != null && isFinite(v)));
+        const degs     = stints.map(s => s.deg).filter(v => v != null);
+        const avgDeg   = degs.length ? degs.reduce((a, b) => a + b) / degs.length : null;
+        const totalLaps = stints.reduce((n, s) => n + s.laps.length, 0);
+        const driverList = [...new Set(stints.map(s => `${s.driver.split(' ')[0]}(С${s.stintNum})`))].join(', ');
+        const isPitKart = kNr === pk1 || kNr === pk2;
+        const speedPct = totalAvg && worstKA > bestKA
+          ? Math.round(((worstKA - totalAvg) / (worstKA - bestKA)) * 100) : 50;
+        const barCol = speedPct >= 70 ? '#4caf50' : speedPct >= 40 ? '#ffd54f' : '#e94560';
+        return `<tr>
+          <td><span style="color:var(--accent-blue);font-weight:700;font-size:1.05rem">К${kNr}</span>
+            ${isPitKart ? '<span style="font-size:0.7rem;color:var(--accent-yellow);margin-left:5px">питкарт</span>' : ''}</td>
+          <td><div style="display:flex;align-items:center;gap:8px">
             <div style="flex:1;height:7px;background:rgba(255,255,255,0.06);border-radius:4px;overflow:hidden">
-              <div style="height:100%;width:${speedPct}%;background:${barColor};border-radius:4px"></div>
-            </div>
-            <span style="font-size:0.8rem;color:var(--text-dim);width:26px">${speedPct}</span>
-          </div>
-        </td>
-        <td>${totalAvg ? formatTime(totalAvg) : '—'}</td>
-        <td class="best-val">${isFinite(bestLap) ? formatTime(bestLap) : '—'}</td>
-        <td>${degFmt(avgDeg)}</td>
-        <td>${totalLaps}</td>
-        <td style="font-size:0.78rem;color:var(--text-dim)">${driverList}</td>
-      </tr>`;
-    }).join('');
+              <div style="height:100%;width:${speedPct}%;background:${barCol};border-radius:4px"></div>
+            </div><span style="font-size:0.8rem;color:var(--text-dim);width:26px">${speedPct}</span></div></td>
+          <td>${totalAvg ? formatTime(totalAvg) : '—'}</td>
+          <td class="best-val">${isFinite(bestLap) ? formatTime(bestLap) : '—'}</td>
+          <td>${degFmt(avgDeg)}</td>
+          <td>${totalLaps}</td>
+          <td style="font-size:0.78rem;color:var(--text-dim)">${driverList}</td>
+        </tr>`;
+      }).join('');
 
     kartPerfCard = `
 <div class="card">
   <h3>&#127950; Производительность картов</h3>
-  <p style="font-size:0.8rem;color:var(--text-dim);margin-bottom:14px">
-    Среднее время не нормировано по пилоту — используйте столбец <strong>Рейтинг</strong> для относительного сравнения картов в рамках этой гонки.
-  </p>
+  <p style="font-size:0.8rem;color:var(--text-dim);margin-bottom:14px">Рейтинг — относительный по гонке. Ср. темп не нормирован по пилоту.</p>
   <div class="table-wrap"><table>
-    <thead><tr>
-      <th>Карт</th><th>Рейтинг скорости</th><th>Ср. темп</th><th>Лучший</th><th>Деградация</th><th>Кругов</th><th>Пилоты / стинт</th>
-    </tr></thead>
+    <thead><tr><th>Карт</th><th>Рейтинг</th><th>Ср. темп</th><th>Лучший</th><th>Деградация</th><th>Кругов</th><th>Пилоты</th></tr></thead>
     <tbody>${kartRows}</tbody>
   </table></div>
 </div>`;
-
   } else if (!hasConfig) {
     kartPerfCard = `<div class="card" style="text-align:center;padding:24px">
       <div style="font-size:2rem;margin-bottom:8px">&#128274;</div>
-      <p style="color:var(--text-dim)">Укажите номера питкартов в конфигурации выше, чтобы увидеть подробную статистику по каждому карту.</p>
+      <p style="color:var(--text-dim)">Укажите номера питкартов выше для подробной статистики по каждому карту.</p>
     </div>`;
   }
 
@@ -2737,16 +2835,13 @@ function renderKartsTab() {
   const evoCard = evolutionPoints.length >= 5 ? `
 <div class="card">
   <h3>&#127959;&#65039; Эволюция трассы</h3>
-  <p style="font-size:0.8rem;color:var(--text-dim);margin-bottom:12px">
-    Медианный темп поля по кругам (питстопы исключены). Снижение кривой = укатка резины и прогрев асфальта.
-  </p>
+  <p style="font-size:0.8rem;color:var(--text-dim);margin-bottom:12px">Медианный темп поля по кругам (питстопы исключены).</p>
   <div class="chart-container" style="min-height:220px"><canvas id="chartTrackEvolution"></canvas></div>
 </div>` : '';
 
-  // ── Assemble ──
   panel.innerHTML = configCard + stintCard + stintChartCard + kartPerfCard + evoCard;
 
-  // Wire up "Применить"
+  // Wire "Применить"
   document.getElementById('applyPitCfg').addEventListener('click', () => {
     const v1 = document.getElementById('pitKart1In').value.trim();
     const v2 = document.getElementById('pitKart2In').value.trim();
@@ -2756,24 +2851,23 @@ function renderKartsTab() {
 
   // Charts
   setTimeout(() => {
-    // Stint 1 vs 2 bar chart
-    if (pitOrder.length) {
+    if (hasPits) {
       const ctx = document.getElementById('chartKartStints');
       if (ctx) {
         if (charts.kartStints) charts.kartStints.destroy();
-        const chartDs = driverStints.filter(d => d.s2avg != null);
-        const yMin = Math.floor(Math.min(...chartDs.flatMap(d => [d.s1avg, d.s2avg]).filter(Boolean)) - 1);
+        const chartDs = driverStints.filter(d => d.pitLaps.length > 0);
+        const stintCols = ['#4fc3f7', '#ffd54f', '#ab47bc', '#4caf50'];
+        const datasets = Array.from({ length: numStints }, (_, si) => ({
+          label: `Стинт ${si + 1}`,
+          data: chartDs.map(d => d.stintAvgs[si]),
+          backgroundColor: stintCols[si % stintCols.length] + '55',
+          borderColor: stintCols[si % stintCols.length],
+          borderWidth: 2,
+        }));
+        const allA = chartDs.flatMap(d => d.stintAvgs).filter(Boolean);
         charts.kartStints = new Chart(ctx, {
           type: 'bar',
-          data: {
-            labels: chartDs.map(d => d.driver),
-            datasets: [
-              { label: 'Стинт 1', data: chartDs.map(d => d.s1avg),
-                backgroundColor: '#4fc3f755', borderColor: '#4fc3f7', borderWidth: 2 },
-              { label: 'Стинт 2', data: chartDs.map(d => d.s2avg),
-                backgroundColor: '#ffd54f55', borderColor: '#ffd54f', borderWidth: 2 },
-            ],
-          },
+          data: { labels: chartDs.map(d => d.driver), datasets },
           options: {
             responsive: true, maintainAspectRatio: false,
             plugins: {
@@ -2783,9 +2877,9 @@ function renderKartsTab() {
             scales: {
               x: { ticks: { color: '#e0e0e0' }, grid: { display: false } },
               y: {
-                title: { display: true, text: 'Ср. время (сек)', color: '#8892a4' },
                 ticks: { color: '#8892a4', callback: v => formatTime(v) },
-                grid: { color: '#2a2a4a' }, min: yMin,
+                grid: { color: '#2a2a4a' },
+                min: allA.length ? Math.floor(Math.min(...allA) - 1) : undefined,
               },
             },
           },
@@ -2793,22 +2887,17 @@ function renderKartsTab() {
       }
     }
 
-    // Track evolution chart
     if (evolutionPoints.length >= 5) {
       const ctxEvo = document.getElementById('chartTrackEvolution');
       if (ctxEvo) {
         if (charts.trackEvolution) charts.trackEvolution.destroy();
-        const yEvoMin = Math.floor(Math.min(...evolutionPoints.map(p => p.med)) - 1);
         charts.trackEvolution = new Chart(ctxEvo, {
           type: 'line',
           data: {
             labels: evolutionPoints.map(p => `Кр.${p.lap}`),
-            datasets: [{
-              label: 'Медиана поля',
-              data: evolutionPoints.map(p => p.med),
+            datasets: [{ label: 'Медиана поля', data: evolutionPoints.map(p => p.med),
               borderColor: '#ab47bc', backgroundColor: 'rgba(171,71,188,0.12)',
-              borderWidth: 2, pointRadius: 2, tension: 0.35, fill: true,
-            }],
+              borderWidth: 2, pointRadius: 2, tension: 0.35, fill: true }],
           },
           options: {
             responsive: true, maintainAspectRatio: false,
@@ -2818,10 +2907,8 @@ function renderKartsTab() {
             },
             scales: {
               x: { ticks: { color: '#8892a4', maxTicksLimit: 18 }, grid: { color: '#2a2a4a' } },
-              y: {
-                ticks: { color: '#8892a4', callback: v => formatTime(v) },
-                grid: { color: '#2a2a4a' }, min: yEvoMin,
-              },
+              y: { ticks: { color: '#8892a4', callback: v => formatTime(v) }, grid: { color: '#2a2a4a' },
+                min: Math.floor(Math.min(...evolutionPoints.map(p => p.med)) - 1) },
             },
           },
         });
@@ -2896,6 +2983,22 @@ function setupUploadZone(zoneId, inputId, filenameId, type) {
 setupUploadZone('dropQuali', 'qualiInput', 'qualiFilename', 'quali');
 setupUploadZone('dropRace', 'raceInput', 'raceFilename', 'race');
 
+// Session config buttons
+document.querySelectorAll('#scRaces .sc-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#scRaces .sc-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    sessionCfg.racesPerDay = parseInt(btn.dataset.val);
+  });
+});
+document.querySelectorAll('#scPits .sc-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#scPits .sc-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    sessionCfg.pitStopsPerRace = parseInt(btn.dataset.val);
+  });
+});
+
 // Analyze button
 document.getElementById('btnAnalyze').addEventListener('click', async () => {
   const btn = document.getElementById('btnAnalyze');
@@ -2921,6 +3024,10 @@ document.getElementById('btnAnalyze').addEventListener('click', async () => {
       parsedData.raceLaps = parsed.lapTimes;
       Object.assign(parsedData.meta, parseMeta(rows, raceFile.name));
     }
+
+    // Store session config in meta so it's saved with the race and used in kart analysis
+    parsedData.meta.pitStopsPerRace = sessionCfg.pitStopsPerRace;
+    parsedData.meta.racesPerDay     = sessionCfg.racesPerDay;
 
     selectedDrivers.clear();
     await saveToHistory(parsedData);
