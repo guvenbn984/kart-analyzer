@@ -4,50 +4,58 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kart Race Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.min.mjs" type="module"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link rel="stylesheet" href="colors_and_type.css">
 <style>
 :root {
-  --bg: #0f0f1a;
-  --bg-card: #1a1a2e;
-  --bg-card-alt: #16213e;
-  --text: #e0e0e0;
-  --text-dim: #8892a4;
+  --bg: #0c0c14;
+  --bg-card: #18182a;
+  --bg-card-alt: #13131f;
+  --text: #d8dce8;
+  --text-dim: #6b7491;
   --accent: #e94560;
   --accent-green: #4caf50;
   --accent-blue: #4fc3f7;
   --accent-yellow: #ffd54f;
   --accent-orange: #ff9800;
-  --border: #2a2a4a;
-  --radius: 10px;
-  --shadow: 0 4px 20px rgba(0,0,0,0.4);
+  --border: rgba(255,255,255,0.07);
+  --radius: 14px;
+  --shadow: 0 4px 20px rgba(0,0,0,0.5);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: 'DM Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
   line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Header */
 .header {
-  background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-alt) 100%);
+  background: var(--bg-card-alt);
   border-bottom: 1px solid var(--border);
-  padding: 20px 30px;
+  padding: 0 28px;
+  height: 56px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
   gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .header h1 {
-  font-size: 1.6rem;
-  font-weight: 700;
+  font-size: 17px;
+  font-weight: 800;
   background: linear-gradient(135deg, var(--accent) 0%, var(--accent-orange) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -56,7 +64,7 @@ body {
 
 .header-info {
   color: var(--text-dim);
-  font-size: 0.85rem;
+  font-size: 12px;
 }
 
 /* Upload Section */
@@ -75,23 +83,24 @@ body {
 
 .upload-zone {
   background: var(--bg-card);
-  border: 2px dashed var(--border);
+  border: 1.5px dashed var(--border);
   border-radius: var(--radius);
-  padding: 30px 20px;
+  padding: 28px 20px;
   text-align: center;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.2s;
   position: relative;
 }
 
 .upload-zone:hover, .upload-zone.dragover {
   border-color: var(--accent);
-  background: rgba(233, 69, 96, 0.05);
+  background: rgba(233, 69, 96, 0.04);
 }
 
 .upload-zone.loaded {
   border-color: var(--accent-green);
   border-style: solid;
+  background: rgba(76, 175, 80, 0.04);
 }
 
 .upload-zone input[type="file"] {
@@ -127,25 +136,27 @@ body {
 .btn-analyze {
   display: block;
   margin: 0 auto;
-  padding: 14px 40px;
+  padding: 13px 36px;
   background: linear-gradient(135deg, var(--accent) 0%, #c0392b 100%);
   color: white;
   border: none;
-  border-radius: var(--radius);
-  font-size: 1.1rem;
+  border-radius: 10px;
+  font-size: 15px;
   font-weight: 600;
+  font-family: inherit;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  box-shadow: var(--shadow);
+  transition: all 0.15s;
+  box-shadow: 0 4px 16px rgba(233,69,96,0.2);
 }
 
 .btn-analyze:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 25px rgba(233, 69, 96, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 28px rgba(233, 69, 96, 0.35);
+  background: linear-gradient(135deg, #f05470 0%, #d03520 100%);
 }
 
 .btn-analyze:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
@@ -173,18 +184,21 @@ body {
   background: transparent;
   color: var(--text-dim);
   border: none;
-  border-bottom: 3px solid transparent;
-  font-size: 0.9rem;
-  font-weight: 500;
+  border-bottom: 2px solid transparent;
+  font-size: 13px;
+  font-weight: 400;
+  font-family: inherit;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.2s;
+  transition: all 0.15s;
+  margin-bottom: -1px;
 }
 
 .tab-btn:hover { color: var(--text); }
 
 .tab-btn.active {
-  color: var(--accent);
+  color: var(--text);
+  font-weight: 600;
   border-bottom-color: var(--accent);
 }
 
@@ -197,42 +211,45 @@ body {
   border-radius: var(--radius);
   padding: 20px;
   margin-bottom: 20px;
-  box-shadow: var(--shadow);
   border: 1px solid var(--border);
 }
 
 .card h3 {
-  font-size: 1.1rem;
+  font-size: 13px;
+  font-weight: 600;
   margin-bottom: 16px;
   color: var(--accent-blue);
+  letter-spacing: 0.01em;
 }
 
 /* Summary Row */
 .summary-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
   margin-bottom: 24px;
 }
 
 .summary-card {
-  background: var(--bg-card);
-  border-radius: var(--radius);
-  padding: 16px;
-  text-align: center;
+  background: var(--bg-card-alt);
+  border-radius: 12px;
+  padding: 14px 18px;
   border: 1px solid var(--border);
 }
 
 .summary-card .value {
-  font-size: 1.8rem;
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 800;
   color: var(--accent);
+  line-height: 1.1;
 }
 
 .summary-card .label {
-  font-size: 0.8rem;
+  font-size: 11px;
   color: var(--text-dim);
-  margin-top: 4px;
+  margin-top: 5px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 /* Tables */
@@ -243,39 +260,62 @@ body {
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: 13px;
 }
 
 thead th {
   background: var(--bg-card-alt);
-  padding: 10px 12px;
+  padding: 10px 14px;
   text-align: left;
   font-weight: 600;
-  color: var(--accent-blue);
-  position: sticky;
-  top: 0;
+  font-size: 11px;
+  color: #5a6a90;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   white-space: nowrap;
-  border-bottom: 2px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
+
+thead th.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s;
+}
+thead th.sortable:hover { color: #8898c0; }
+thead th.sort-active { color: var(--accent-blue); }
 
 tbody td {
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
+  padding: 11px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
   white-space: nowrap;
+  vertical-align: middle;
 }
 
-tbody tr:nth-child(even) { background: rgba(255,255,255,0.02); }
-tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
+tbody tr:nth-child(even) { background: rgba(255,255,255,0.01); }
+tbody tr:hover { background: rgba(79, 195, 247, 0.04); }
 
-.pos-up { color: var(--accent-green); font-weight: 600; }
-.pos-down { color: var(--accent); font-weight: 600; }
-.pos-same { color: var(--text-dim); }
+/* Position delta pills */
+.pos-up {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 700;
+  background: rgba(76,175,80,0.12); color: #4caf50;
+}
+.pos-down {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 700;
+  background: rgba(233,69,96,0.12); color: #e94560;
+}
+.pos-same {
+  display: inline-flex; align-items: center;
+  padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 700;
+  background: rgba(107,116,145,0.10); color: #4a506a;
+}
 .best-val { color: var(--accent-green); font-weight: 600; }
 .worst-val { color: var(--accent); }
 
-.podium-1 td:first-child { border-left: 3px solid gold; }
-.podium-2 td:first-child { border-left: 3px solid silver; }
-.podium-3 td:first-child { border-left: 3px solid #cd7f32; }
+.podium-1 td:first-child { box-shadow: inset 3px 0 0 gold; }
+.podium-2 td:first-child { box-shadow: inset 3px 0 0 silver; }
+.podium-3 td:first-child { box-shadow: inset 3px 0 0 #cd7f32; }
 
 /* Driver checkboxes */
 .driver-checkboxes {
@@ -290,12 +330,12 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
   align-items: center;
   gap: 5px;
   padding: 4px 10px;
-  background: var(--bg-card-alt);
+  background: rgba(255,255,255,0.03);
   border: 1px solid var(--border);
-  border-radius: 16px;
-  font-size: 0.8rem;
+  border-radius: 99px;
+  font-size: 12px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
   user-select: none;
 }
 
@@ -369,28 +409,32 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.tab-panel.active { animation: fadein 0.2s ease; }
 
 /* Error */
 .error-msg {
-  background: rgba(233, 69, 96, 0.1);
-  border: 1px solid var(--accent);
-  border-radius: var(--radius);
+  background: rgba(233, 69, 96, 0.08);
+  border: 1px solid rgba(233, 69, 96, 0.3);
+  border-radius: 10px;
   padding: 16px;
   color: var(--accent);
   margin: 16px 0;
+  font-size: 13px;
 }
 
 /* Race event info bar */
 .event-info {
   display: flex;
-  gap: 24px;
+  gap: 20px;
   flex-wrap: wrap;
   margin-bottom: 20px;
-  padding: 12px 16px;
+  padding: 10px 16px;
   background: var(--bg-card-alt);
-  border-radius: var(--radius);
+  border-radius: 10px;
   border: 1px solid var(--border);
-  font-size: 0.85rem;
+  font-size: 12px;
 }
 
 .event-info span { color: var(--text-dim); }
@@ -414,10 +458,14 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
   background: var(--bg-card-alt);
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 6px 10px;
-  font-size: 0.85rem;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
 }
+.controls select:focus, .controls input[type="number"]:focus { border-color: rgba(79,195,247,0.35); }
 
 .controls input[type="checkbox"] {
   accent-color: var(--accent);
@@ -431,11 +479,13 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
 }
 
 .history-section h2 {
-  font-size: 1.1rem;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--text-dim);
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   border-bottom: 1px solid var(--border);
   padding-bottom: 8px;
+  letter-spacing: 0.01em;
 }
 
 .history-list {
@@ -448,17 +498,17 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
   display: flex;
   align-items: center;
   gap: 12px;
-  background: var(--bg-card);
+  background: var(--bg-card-alt);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 12px;
   padding: 12px 16px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
 }
 
 .history-item:hover {
-  border-color: var(--accent-blue);
-  background: var(--bg-card-alt);
+  border-color: rgba(79,195,247,0.2);
+  background: var(--bg-card);
 }
 
 .history-item .hi-icon {
@@ -501,22 +551,22 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
 
 /* Status badges */
 .cloud-badge, .local-badge {
-  font-size: 0.7rem;
+  font-size: 11px;
   padding: 2px 8px;
-  border-radius: 10px;
+  border-radius: 99px;
   vertical-align: middle;
   margin-left: 8px;
-  font-weight: 400;
+  font-weight: 500;
 }
 .cloud-badge {
-  background: rgba(79, 195, 247, 0.15);
+  background: rgba(79, 195, 247, 0.1);
   color: var(--accent-blue);
-  border: 1px solid rgba(79, 195, 247, 0.3);
+  border: 1px solid rgba(79, 195, 247, 0.2);
 }
 .local-badge {
-  background: rgba(255, 213, 79, 0.15);
+  background: rgba(255, 213, 79, 0.1);
   color: var(--accent-yellow);
-  border: 1px solid rgba(255, 213, 79, 0.3);
+  border: 1px solid rgba(255, 213, 79, 0.2);
 }
 .loading-inline {
   color: var(--text-dim);
@@ -526,17 +576,40 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
 
 /* Back button */
 .btn-back {
-  padding: 6px 16px;
+  padding: 5px 14px;
   background: transparent;
   color: var(--text-dim);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 0.85rem;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
 }
 
-.btn-back:hover { color: var(--text); border-color: var(--accent-blue); }
+.btn-back:hover {
+  color: var(--text);
+  border-color: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+}
+
+.btn-export-pdf {
+  padding: 5px 14px;
+  background: rgba(76,175,80,0.1);
+  color: var(--accent-green);
+  border: 1px solid rgba(76,175,80,0.25);
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-export-pdf:hover:not(:disabled) {
+  background: rgba(76,175,80,0.18);
+  border-color: rgba(76,175,80,0.45);
+}
+.btn-export-pdf:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* Driver Rating Cards */
 .driver-ratings-grid {
@@ -549,9 +622,10 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
   background: var(--bg-card-alt);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 14px 16px;
+  padding: 18px 20px;
   position: relative;
   overflow: hidden;
+  /* border-top stripe applied inline via JS */
 }
 
 .driver-rating-card .drc-header {
@@ -563,14 +637,16 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
 
 .driver-rating-card .drc-name {
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 14px;
+  color: var(--text);
 }
 
 .driver-rating-card .drc-score {
-  font-size: 1.6rem;
+  font-size: 28px;
   font-weight: 800;
   min-width: 52px;
-  text-align: center;
+  text-align: right;
+  line-height: 1;
 }
 
 .driver-rating-card .drc-bar-row {
@@ -589,16 +665,17 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
 
 .driver-rating-card .drc-bar {
   flex: 1;
-  height: 8px;
-  background: rgba(255,255,255,0.06);
-  border-radius: 4px;
+  height: 4px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 99px;
   overflow: hidden;
 }
 
 .driver-rating-card .drc-bar-fill {
   height: 100%;
-  border-radius: 4px;
+  border-radius: 99px;
   transition: width 0.5s ease;
+  opacity: 0.9;
 }
 
 .driver-rating-card .drc-bar-val {
@@ -627,12 +704,12 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
 .session-config {
   margin: 16px 0;
   padding: 14px 18px;
-  background: var(--bg-card);
+  background: var(--bg-card-alt);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 12px;
   display: flex;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: 28px;
   align-items: center;
 }
 .sc-group {
@@ -642,7 +719,7 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
   flex-wrap: wrap;
 }
 .sc-label {
-  font-size: 0.85rem;
+  font-size: 13px;
   color: var(--text-dim);
   white-space: nowrap;
 }
@@ -652,17 +729,18 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
 }
 .sc-btn {
   padding: 5px 14px;
-  background: var(--bg-card-alt);
+  background: rgba(255,255,255,0.03);
   color: var(--text-dim);
   border: 1px solid var(--border);
-  border-radius: 20px;
-  font-size: 0.85rem;
+  border-radius: 99px;
+  font-size: 13px;
   font-weight: 600;
+  font-family: inherit;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
   user-select: none;
 }
-.sc-btn:hover { border-color: var(--accent-blue); color: var(--text); }
+.sc-btn:hover { border-color: rgba(255,255,255,0.1); color: var(--text); background: rgba(255,255,255,0.06); }
 .sc-btn.active {
   background: var(--accent);
   color: #fff;
@@ -675,14 +753,15 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
   background: var(--bg-card-alt);
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 0.85rem;
-  margin-bottom: 12px;
+  border-radius: 10px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-family: inherit;
+  margin-bottom: 10px;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.15s;
 }
-.history-filter-input:focus { border-color: var(--accent-blue); }
+.history-filter-input:focus { border-color: rgba(79,195,247,0.35); }
 .history-filter-input::placeholder { color: var(--text-dim); }
 
 /* Driver visibility toggle pills */
@@ -738,8 +817,9 @@ tbody tr:hover { background: rgba(79, 195, 247, 0.05); }
 
 <div class="header">
   <h1>Kart Race Analyzer</h1>
-  <div style="display:flex;align-items:center;gap:12px">
+  <div style="display:flex;align-items:center;gap:10px">
     <button class="btn-back" id="btnBack" style="display:none">&#8592; Назад</button>
+    <button class="btn-export-pdf" id="btnExportPDF" style="display:none">&#11015; PDF</button>
     <div class="header-info" id="headerInfo"></div>
   </div>
 </div>
@@ -1126,19 +1206,90 @@ function showApp() {
   document.getElementById('uploadSection').style.display = 'none';
   document.getElementById('app').classList.remove('hidden');
   document.getElementById('btnBack').style.display = '';
+  document.getElementById('btnExportPDF').style.display = '';
   renderAll();
+}
+
+async function exportRacePDF() {
+  const btn = document.getElementById('btnExportPDF');
+  const origText = btn.innerHTML;
+  btn.innerHTML = '&#9203; Генерация...';
+  btn.disabled = true;
+
+  // Temporarily make all tab panels visible for full capture
+  const panels = document.querySelectorAll('.tab-panel');
+  const restored = [];
+  panels.forEach(p => {
+    if (!p.classList.contains('active')) {
+      p.style.display = 'block';
+      restored.push(p);
+    }
+  });
+
+  try {
+    // Brief pause so any lazy-rendered content can paint
+    await new Promise(r => setTimeout(r, 150));
+
+    const appEl = document.getElementById('app');
+    const canvas = await html2canvas(appEl, {
+      backgroundColor: '#0c0c14',
+      scale: 1.5,
+      useCORS: true,
+      logging: false,
+      allowTaint: true,
+    });
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const imgRatio = canvas.height / canvas.width;
+    const fullH = pageW * imgRatio;
+
+    // Split across pages
+    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+    let y = 0;
+    while (y < fullH) {
+      if (y > 0) pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, -y, pageW, fullH);
+      y += pageH;
+    }
+
+    const ev = (parsedData?.meta?.event || 'Race').replace(/[\\/:*?"<>|]/g, '_');
+    const dt = parsedData?.meta?.date ? parsedData.meta.date.replace(/\./g, '-') : new Date().toISOString().slice(0, 10);
+    pdf.save(`KartRace_${ev}_${dt}.pdf`);
+  } catch (err) {
+    console.error('PDF export error:', err);
+    alert('Ошибка генерации PDF: ' + err.message);
+  } finally {
+    restored.forEach(p => { p.style.display = ''; });
+    btn.innerHTML = origText;
+    btn.disabled = false;
+  }
 }
 
 async function showUpload() {
   document.getElementById('uploadSection').style.display = '';
   document.getElementById('app').classList.add('hidden');
   document.getElementById('btnBack').style.display = 'none';
+  document.getElementById('btnExportPDF').style.display = 'none';
   // Destroy all charts
   for (const [key, c] of Object.entries(charts)) {
     if (c && c.destroy) c.destroy();
     delete charts[key];
   }
   await renderHistory();
+}
+
+// ===== Table sort state =====
+let _kartsSort  = { col: 'rating', dir: -1 }; // best rating first by default
+let _stintsSort = { col: null,     dir:  1 };
+
+function sortThHtml(label, col, sortState, prefix) {
+  const active = sortState.col === col;
+  const arrow  = active ? (sortState.dir === 1 ? '↑' : '↓') : '↕';
+  return `<th class="sortable${active ? ' sort-active' : ''}" data-sort="${prefix}:${col}">`
+       + `${label} <span style="font-size:9px;opacity:${active ? 1 : 0.3}">${arrow}</span></th>`;
 }
 
 // ===== Driver Colors =====
@@ -1890,10 +2041,19 @@ function renderRatingCard(r, showRacesInfo = false) {
        </div>`
     : '';
 
-  return `<div class="driver-rating-card">
+  const scoreColor = r.scoreClass === 'score-excellent' ? '#4caf50'
+    : r.scoreClass === 'score-good' ? '#8bc34a'
+    : r.scoreClass === 'score-average' ? '#ffd54f'
+    : r.scoreClass === 'score-below' ? '#ff9800'
+    : '#e94560';
+
+  return `<div class="driver-rating-card" style="border-top: 2.5px solid ${scoreColor}">
     <div class="drc-header">
       <span class="drc-name">${header}</span>
-      <span class="drc-score ${r.scoreClass}">${r.total}</span>
+      <div style="text-align:right">
+        <span class="drc-score ${r.scoreClass}">${r.total}</span>
+        <div style="font-size:10px;font-weight:600;color:${scoreColor};letter-spacing:0.04em;margin-top:2px">${r.scoreClass === 'score-excellent' ? 'ОТЛИЧНО' : r.scoreClass === 'score-good' ? 'ХОРОШО' : r.scoreClass === 'score-average' ? 'СРЕДНЕ' : r.scoreClass === 'score-below' ? 'НИЖЕ СР.' : 'СЛАБО'}</div>
+      </div>
     </div>
     ${extra}
     ${trafficHtml}
@@ -2063,7 +2223,7 @@ function renderStandings() {
       const qp = qualiMap[r.kartNumber];
       const posChange = qp ? qp.position - r.position : null;
       const changeClass = posChange > 0 ? 'pos-up' : posChange < 0 ? 'pos-down' : 'pos-same';
-      const changeText = posChange > 0 ? `+${posChange}` : posChange === 0 ? '=' : posChange != null ? `${posChange}` : '-';
+      const changeText = posChange > 0 ? `↑ +${posChange}` : posChange === 0 ? '— 0' : posChange != null ? `↓ ${posChange}` : '-';
       return `<tr class="${i < 3 ? 'podium-' + (i + 1) : ''}">
         <td><strong>${r.position}</strong></td><td>${r.kartNumber}</td><td>${r.driver}</td>
         <td>${r.laps}</td><td>${r.gap}</td>
@@ -2765,16 +2925,37 @@ function renderKartsTab() {
 </div>`;
 
   // ── 2. Dynamic stint table (columns adapt to numStops) ──
-  let headerCols = '<th>Пилот</th>';
+  let headerCols = sortThHtml('Пилот', 'driver', _stintsSort, 'stints');
   for (let s = 0; s < numStints; s++) {
     const col = STINT_COLORS[s] || 'var(--text)';
     headerCols += `<th style="color:${col}">Карт С${s + 1}</th>`;
-    if (s < numStops) headerCols += `<th>Пит ${s + 1}</th>`;
-    headerCols += `<th>Кр.</th><th>Темп</th><th>Дег.</th>`;
+    if (s < numStops) headerCols += sortThHtml(`Пит ${s + 1}`, `pit${s}`, _stintsSort, 'stints');
+    headerCols += `<th>Кр.</th>`;
+    headerCols += sortThHtml('Темп', `avg${s}`, _stintsSort, 'stints');
+    headerCols += `<th>Дег.</th>`;
   }
-  if (numStops > 0) headerCols += '<th>Δ С1→Сn</th>';
+  if (numStops > 0) headerCols += sortThHtml('Δ С1→Сn', 'delta', _stintsSort, 'stints');
 
-  const stintRows = driverStints.map(ds => {
+  // Sort driver stints
+  const sortedStints = [...driverStints].sort((a, b) => {
+    const { col, dir } = _stintsSort;
+    if (!col) return 0;
+    if (col === 'driver') return a.driver.localeCompare(b.driver) * dir;
+    const pitMatch = col.match(/^pit(\d+)$/);
+    if (pitMatch) {
+      const i = +pitMatch[1];
+      return ((a.pitLaps[i]?.lapNum ?? 9999) - (b.pitLaps[i]?.lapNum ?? 9999)) * dir;
+    }
+    const avgMatch = col.match(/^avg(\d+)$/);
+    if (avgMatch) {
+      const i = +avgMatch[1];
+      return ((a.stintAvgs[i] ?? 9999) - (b.stintAvgs[i] ?? 9999)) * dir;
+    }
+    if (col === 'delta') return ((a.deltaTotal ?? 9999) - (b.deltaTotal ?? 9999)) * dir;
+    return 0;
+  });
+
+  const stintRows = sortedStints.map(ds => {
     let cells = `<td><strong>${ds.driver}</strong></td>`;
     for (let s = 0; s < numStints; s++) {
       const col = STINT_COLORS[s] || 'var(--text)';
@@ -2829,45 +3010,76 @@ function renderKartsTab() {
     const bestKA = allKartAvgs.length ? Math.min(...allKartAvgs) : 1;
     const worstKA = allKartAvgs.length ? Math.max(...allKartAvgs) : 2;
 
-    const kartRows = Object.entries(kartMap)
-      .sort(([, aS], [, bS]) => (stintAvg(aS.map(s => s.avg).filter(Boolean)) || 999) - (stintAvg(bS.map(s => s.avg).filter(Boolean)) || 999))
-      .map(([kNr, stints]) => {
-        const avgs = stints.map(s => s.avg).filter(Boolean);
-        const totalAvg = stintAvg(avgs);
-        const bestLap  = Math.min(...stints.map(s => s.best).filter(v => v != null && isFinite(v)));
-        const degs     = stints.map(s => s.deg).filter(v => v != null);
-        const avgDeg   = degs.length ? degs.reduce((a, b) => a + b) / degs.length : null;
-        const totalLaps = stints.reduce((n, s) => n + s.laps.length, 0);
-        const driverList = [...new Set(stints.map(s => `${s.driver.split(' ')[0]}(С${s.stintNum})`))].join(', ');
-        const isPitKart = kNr === pk1 || kNr === pk2;
-        const speedPct = totalAvg && worstKA > bestKA
-          ? Math.round(((worstKA - totalAvg) / (worstKA - bestKA)) * 100) : 50;
-        const barCol = speedPct >= 70 ? '#4caf50' : speedPct >= 40 ? '#ffd54f' : '#e94560';
-        const kTechNr = techMap[kNr];
-        return `<tr>
-          <td>
-            <span style="color:var(--accent-blue);font-weight:700;font-size:1.05rem">К${kNr}</span>
-            ${isPitKart ? '<span style="font-size:0.7rem;color:var(--accent-yellow);margin-left:5px">питкарт</span>' : ''}
-            ${kTechNr ? `<br><span style="font-size:0.75rem;color:var(--text-dim)">${kTechNr}</span>` : ''}
-          </td>
-          <td><div style="display:flex;align-items:center;gap:8px">
-            <div style="flex:1;height:7px;background:rgba(255,255,255,0.06);border-radius:4px;overflow:hidden">
-              <div style="height:100%;width:${speedPct}%;background:${barCol};border-radius:4px"></div>
-            </div><span style="font-size:0.8rem;color:var(--text-dim);width:26px">${speedPct}</span></div></td>
-          <td>${totalAvg ? formatTime(totalAvg) : '—'}</td>
-          <td class="best-val">${isFinite(bestLap) ? formatTime(bestLap) : '—'}</td>
-          <td>${degFmt(avgDeg)}</td>
-          <td>${totalLaps}</td>
-          <td style="font-size:0.78rem;color:var(--text-dim)">${driverList}</td>
-        </tr>`;
-      }).join('');
+    // Build row data objects for sorting
+    const kartRowData = Object.entries(kartMap).map(([kNr, stints]) => {
+      const avgs     = stints.map(s => s.avg).filter(Boolean);
+      const totalAvg = stintAvg(avgs);
+      const bests    = stints.map(s => s.best).filter(v => v != null && isFinite(v));
+      const bestLap  = bests.length ? Math.min(...bests) : null;
+      const degs     = stints.map(s => s.deg).filter(v => v != null);
+      const avgDeg   = degs.length ? degs.reduce((a, b) => a + b) / degs.length : null;
+      const totalLaps = stints.reduce((n, s) => n + s.laps.length, 0);
+      const driverList = [...new Set(stints.map(s => `${s.driver.split(' ')[0]}(С${s.stintNum})`))].join(', ');
+      const isPitKart = kNr === pk1 || kNr === pk2;
+      const speedPct = totalAvg && worstKA > bestKA
+        ? Math.round(((worstKA - totalAvg) / (worstKA - bestKA)) * 100) : 50;
+      return { kNr, totalAvg, bestLap, avgDeg, totalLaps, driverList, isPitKart, speedPct };
+    });
+
+    // Apply sort
+    kartRowData.sort((a, b) => {
+      const { col, dir } = _kartsSort;
+      const nullLast = (av, bv) => {
+        if (av == null && bv == null) return 0;
+        if (av == null) return 1;
+        if (bv == null) return -1;
+        return (av - bv) * dir;
+      };
+      if (col === 'kart')   return (parseInt(a.kNr) - parseInt(b.kNr)) * dir;
+      if (col === 'rating') return nullLast(a.speedPct, b.speedPct);
+      if (col === 'avg')    return nullLast(a.totalAvg, b.totalAvg);
+      if (col === 'best')   return nullLast(a.bestLap, b.bestLap);
+      if (col === 'deg')    return nullLast(a.avgDeg, b.avgDeg);
+      if (col === 'laps')   return (a.totalLaps - b.totalLaps) * dir;
+      return 0;
+    });
+
+    const kartRows = kartRowData.map(({ kNr, totalAvg, bestLap, avgDeg, totalLaps, driverList, isPitKart, speedPct }) => {
+      const barCol = speedPct >= 70 ? '#4caf50' : speedPct >= 40 ? '#ffd54f' : '#e94560';
+      const kTechNr = techMap[kNr];
+      return `<tr>
+        <td>
+          <span style="color:var(--accent-blue);font-weight:700;font-size:1.05rem">К${kNr}</span>
+          ${isPitKart ? '<span style="font-size:0.7rem;color:var(--accent-yellow);margin-left:5px">питкарт</span>' : ''}
+          ${kTechNr ? `<br><span style="font-size:0.75rem;color:var(--text-dim)">${kTechNr}</span>` : ''}
+        </td>
+        <td><div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;height:5px;background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden">
+            <div style="height:100%;width:${speedPct}%;background:${barCol};border-radius:99px"></div>
+          </div><span style="font-size:0.8rem;color:var(--text-dim);width:26px">${speedPct}</span></div></td>
+        <td>${totalAvg ? formatTime(totalAvg) : '—'}</td>
+        <td class="best-val">${bestLap != null && isFinite(bestLap) ? formatTime(bestLap) : '—'}</td>
+        <td>${degFmt(avgDeg)}</td>
+        <td>${totalLaps}</td>
+        <td style="font-size:0.78rem;color:var(--text-dim)">${driverList}</td>
+      </tr>`;
+    }).join('');
+
+    const kartThs = `<tr>
+      ${sortThHtml('Карт',        'kart',   _kartsSort, 'karts')}
+      ${sortThHtml('Рейтинг',     'rating', _kartsSort, 'karts')}
+      ${sortThHtml('Ср. темп',    'avg',    _kartsSort, 'karts')}
+      ${sortThHtml('Лучший',      'best',   _kartsSort, 'karts')}
+      ${sortThHtml('Деградация',  'deg',    _kartsSort, 'karts')}
+      ${sortThHtml('Кругов',      'laps',   _kartsSort, 'karts')}
+      <th>Пилоты</th></tr>`;
 
     kartPerfCard = `
 <div class="card">
   <h3>&#127950; Производительность картов</h3>
   <p style="font-size:0.8rem;color:var(--text-dim);margin-bottom:14px">Рейтинг — относительный по гонке. Ср. темп не нормирован по пилоту.</p>
   <div class="table-wrap"><table>
-    <thead><tr><th>Карт</th><th>Рейтинг</th><th>Ср. темп</th><th>Лучший</th><th>Деградация</th><th>Кругов</th><th>Пилоты</th></tr></thead>
+    <thead>${kartThs}</thead>
     <tbody>${kartRows}</tbody>
   </table></div>
 </div>`;
@@ -2887,6 +3099,21 @@ function renderKartsTab() {
 </div>` : '';
 
   panel.innerHTML = configCard + stintCard + stintChartCard + kartPerfCard + evoCard;
+
+  // Wire sortable column headers
+  panel.querySelectorAll('th[data-sort]').forEach(th => {
+    th.addEventListener('click', () => {
+      const [prefix, col] = th.dataset.sort.split(':');
+      if (prefix === 'karts') {
+        if (_kartsSort.col === col) _kartsSort.dir *= -1;
+        else { _kartsSort.col = col; _kartsSort.dir = col === 'avg' || col === 'best' ? 1 : -1; }
+      } else if (prefix === 'stints') {
+        if (_stintsSort.col === col) _stintsSort.dir *= -1;
+        else { _stintsSort.col = col; _stintsSort.dir = col === 'driver' ? 1 : 1; }
+      }
+      renderKartsTab();
+    });
+  });
 
   // Wire "Применить" (pit karts)
   document.getElementById('applyPitCfg').addEventListener('click', () => {
@@ -3106,6 +3333,9 @@ document.getElementById('btnAnalyze').addEventListener('click', async () => {
 
 // Back button
 document.getElementById('btnBack').addEventListener('click', showUpload);
+
+// PDF export
+document.getElementById('btnExportPDF').addEventListener('click', exportRacePDF);
 
 // Initialize history on load
 await renderHistory();
