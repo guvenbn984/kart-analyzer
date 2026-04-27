@@ -2480,14 +2480,7 @@ function renderHeatmap(lapData) {
 
 // ===== Kart & Pit Stop Analysis =====
 const PIT_CONFIG_KEY  = 'kartAnalyzerPitConfig';
-const KART_TECH_KEY   = 'kartAnalyzerKartTech';   // { racingNr -> techNr }
-
-function getKartTechMap() {
-  try { return JSON.parse(localStorage.getItem(KART_TECH_KEY) || '{}'); } catch { return {}; }
-}
-function saveKartTechMap(map) {
-  localStorage.setItem(KART_TECH_KEY, JSON.stringify(map));
-}
+// Tech kart numbers are stored per-race inside parsedData.meta.kartTechMap
 
 // Detect up to numStops pit laps (anomalously long laps) and split into stints.
 // Returns { pitLaps: [{lapNum,lapIdx,lapTime}], stints: [laps[]] }
@@ -2661,7 +2654,8 @@ function renderKartsTab() {
   if (pk2) allRaceKartNrs.add(pk2);
 
   // Load tech-number mapping
-  const techMap = getKartTechMap();
+  // Tech map is scoped to this race only
+  const techMap = parsedData.meta?.kartTechMap || {};
 
   // Build per-driver stint data (dynamic: numStints stints per driver)
   const driverStints = drivers.map(driver => {
@@ -2902,18 +2896,17 @@ function renderKartsTab() {
     renderKartsTab();
   });
 
-  // Wire "Сохранить тех. номера"
-  document.getElementById('saveKartTech')?.addEventListener('click', () => {
-    const updated = { ...getKartTechMap() };
+  // Wire "Сохранить тех. номера" — saves into current race meta and re-persists to history
+  document.getElementById('saveKartTech')?.addEventListener('click', async () => {
+    const updated = {};
     document.querySelectorAll('.kart-tech-in').forEach(inp => {
       const v = inp.value.trim();
       if (v) updated[inp.dataset.kart] = v;
-      else delete updated[inp.dataset.kart];
     });
-    saveKartTechMap(updated);
-    // Visual confirmation
+    parsedData.meta.kartTechMap = updated;
+    await saveToHistory(parsedData);
     const btn = document.getElementById('saveKartTech');
-    if (btn) { btn.textContent = '✓ Сохранено'; setTimeout(() => renderKartsTab(), 800); }
+    if (btn) { btn.textContent = '✓ Сохранено'; setTimeout(() => renderKartsTab(), 600); }
   });
 
   // Charts
