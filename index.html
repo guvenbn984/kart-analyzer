@@ -8,8 +8,8 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;0,9..40,900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.min.mjs" type="module"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.12/build/pdfmake.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.12/build/vfs_fonts.min.js"></script>
 <link rel="stylesheet" href="colors_and_type.css">
 <style>
 :root {
@@ -1059,8 +1059,8 @@ tbody tr:hover { background: rgba(255,55,95,0.04); }
       <span class="sc-label">Питстопов в гонке:</span>
       <div class="sc-options" id="scPits">
         <button class="sc-btn" data-val="0">0</button>
-        <button class="sc-btn active" data-val="1">1</button>
-        <button class="sc-btn" data-val="2">2</button>
+        <button class="sc-btn" data-val="1">1</button>
+        <button class="sc-btn active" data-val="2">2</button>
       </div>
     </div>
   </div>
@@ -1230,7 +1230,7 @@ let raceFile = null;
 let parsedData = { qualification: null, race: null, qualiLaps: null, raceLaps: null, meta: {} };
 
 // Session config (set by the radio buttons in the upload section)
-const sessionCfg = { racesPerDay: 1, pitStopsPerRace: 1 };
+const sessionCfg = { racesPerDay: 1, pitStopsPerRace: 2 };
 const charts = {};
 const STORAGE_KEY = 'kartAnalyzerHistory';
 const HIDDEN_DRIVERS_KEY = 'kartAnalyzerHiddenDrivers';
@@ -1326,6 +1326,13 @@ async function deleteFromHistory(id) {
   await fbDelete(id);
 }
 
+function parseDateDMY(s) {
+  if (!s || s === 'Неизвестно') return 0;
+  const p = s.split('.');
+  if (p.length !== 3) return 0;
+  return new Date(+p[2], +p[1] - 1, +p[0]).getTime();
+}
+
 async function loadHistoryList() {
   if (firebaseReady) {
     historyCache = await fbLoadAll();
@@ -1334,6 +1341,8 @@ async function loadHistoryList() {
   } else {
     historyCache = lsGetHistory();
   }
+  // Sort by race date descending (most recent first)
+  historyCache.sort((a, b) => parseDateDMY(b.date) - parseDateDMY(a.date));
   return historyCache;
 }
 
@@ -1391,6 +1400,8 @@ async function renderHistory() {
   list.querySelectorAll('.hi-delete').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
+      const pwd = prompt('Для подтверждения удаления введите: delete');
+      if (pwd !== 'delete') return;
       await deleteFromHistory(btn.dataset.id);
       await renderHistory();
     });
@@ -1416,147 +1427,144 @@ function showApp() {
 }
 
 function exportRacePDF() {
-  if (!window.jspdf) {
+  if (!window.pdfMake) {
     alert('PDF-библиотека не загружена. Обновите страницу и попробуйте снова.');
     return;
   }
-  const { jsPDF } = window.jspdf;
 
-  // Temporarily show all panels so we can read their table DOM
+  // Show all panels temporarily so hidden tabs' tables are in DOM
   const allPanels = document.querySelectorAll('.tab-panel');
   const savedDisplay = [];
   allPanels.forEach(p => { savedDisplay.push(p.style.display); p.style.display = 'block'; });
 
   try {
-    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-    const PW = doc.internal.pageSize.getWidth();
-    const PH = doc.internal.pageSize.getHeight();
-    const M  = 12;
-
     const meta      = parsedData.meta || {};
     const metaParts = [meta.date, meta.time, meta.event, meta.track, meta.category].filter(Boolean);
 
-    // ── Helper: table DOM → { head, body } ──
-    function extractTable(tableEl) {
-      if (!tableEl) return null;
-      const head = [...tableEl.querySelectorAll('thead tr')].map(tr =>
-        [...tr.querySelectorAll('th')].map(th => th.textContent.trim().replace(/[↑↓↕]/g,'').trim())
-      );
-      const body = [...tableEl.querySelectorAll('tbody tr')].map(tr =>
-        [...tr.querySelectorAll('td')].map(td => td.textContent.trim().replace(/\s+/g,' '))
-      );
-      return (head.length || body.length) ? { head, body } : null;
-    }
-
-    // ── Common autoTable style ──
-    const TBL = {
-      theme: 'striped',
-      headStyles:           { fillColor:[20,32,70], textColor:[210,225,255], fontSize:8, fontStyle:'bold', halign:'center', cellPadding:3 },
-      bodyStyles:           { fontSize:7.5, textColor:[25,25,25], cellPadding:2.5 },
-      alternateRowStyles:   { fillColor:[238,242,255] },
-      margin:               { left:M, right:M },
-      styles:               { overflow:'linebreak' },
+    // ── Table layout (shared) ──
+    const tblLayout = {
+      fillColor: (row, node) => row === 0 ? '#1a2448' : (row % 2 === 0 ? '#eef2ff' : null),
+      hLineWidth: () => 0.5,
+      vLineWidth: () => 0,
+      hLineColor: () => '#c0c8e8',
+      paddingLeft: () => 5,
+      paddingRight: () => 5,
+      paddingTop: () => 3,
+      paddingBottom: () => 3,
     };
 
-    function sectionTitle(text, y) {
-      doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(60,110,210);
-      doc.text(text, M, y);
+    // ── Helper: DOM table → pdfmake table object ──
+    function domToPdfTable(tableEl) {
+      if (!tableEl) return null;
+      const headRows = [...tableEl.querySelectorAll('thead tr')].map(tr =>
+        [...tr.querySelectorAll('th')].map(th => ({
+          text: th.textContent.trim().replace(/[↑↓↕]/g, '').trim(),
+          bold: true, fontSize: 8, color: '#ccdcff', alignment: 'center',
+        }))
+      );
+      const bodyRows = [...tableEl.querySelectorAll('tbody tr')].map(tr =>
+        [...tr.querySelectorAll('td')].map(td => ({
+          text: td.textContent.trim().replace(/\s+/g, ' '),
+          fontSize: 8,
+        }))
+      );
+      const allRows = [...headRows, ...bodyRows];
+      if (!allRows.length || !allRows[0].length) return null;
+      return {
+        table: {
+          headerRows: headRows.length,
+          widths: new Array(allRows[0].length).fill('*'),
+          body: allRows,
+        },
+        layout: tblLayout,
+        margin: [0, 2, 0, 14],
+      };
     }
 
-    // ── Page header ──
-    doc.setFont('helvetica','bold'); doc.setFontSize(17); doc.setTextColor(220,50,75);
-    doc.text('Kart Race Analyzer', M, 13);
+    const content = [];
+
+    // ── Header ──
+    content.push({ text: 'Kart Race Analyzer', fontSize: 18, bold: true, color: '#dc3252', margin: [0,0,0,4] });
     if (metaParts.length) {
-      doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(110,110,120);
-      doc.text(metaParts.join('   ·   '), M, 19);
+      content.push({ text: metaParts.join('   ·   '), fontSize: 9, color: '#777', margin: [0,0,0,14] });
     }
 
     // ── 1. Standings ──
-    const standingsEl = document.querySelector('#tab-standings table');
-    const standings   = extractTable(standingsEl);
-    if (standings?.body?.length) {
-      sectionTitle('Итоговая классификация', 26);
-      doc.autoTable({
-        ...TBL, head:standings.head, body:standings.body, startY:30,
-        columnStyles:{ 2:{ cellWidth:36 } },
-        didParseCell(data) {
-          if (data.section === 'body') {
-            if      (data.row.index === 0) data.cell.styles.fillColor = [255,248,210];
-            else if (data.row.index === 1) data.cell.styles.fillColor = [240,240,244];
-            else if (data.row.index === 2) data.cell.styles.fillColor = [255,242,225];
-          }
-        },
-      });
+    const standingsTbl = domToPdfTable(document.querySelector('#tab-standings table'));
+    if (standingsTbl) {
+      content.push({ text: 'Итоговая классификация', style: 'section' });
+      content.push(standingsTbl);
     }
 
-    let curY = (doc.lastAutoTable?.finalY ?? 30) + 10;
-
     // ── 2. Stints table (first <table> in #tab-karts) ──
-    const kartsTables = [...document.querySelectorAll('#tab-karts table')];
-    if (kartsTables.length >= 1) {
-      const stints = extractTable(kartsTables[0]);
-      if (stints?.body?.length) {
-        if (curY > PH - 50) { doc.addPage(); curY = 14; }
-        sectionTitle('Стинты и питстопы пилотов', curY); curY += 4;
-        doc.autoTable({ ...TBL, head:stints.head, body:stints.body, startY:curY });
-        curY = doc.lastAutoTable.finalY + 10;
+    const kartTables = [...document.querySelectorAll('#tab-karts table')];
+    if (kartTables.length >= 1) {
+      const stintsTbl = domToPdfTable(kartTables[0]);
+      if (stintsTbl) {
+        content.push({ text: 'Стинты и питстопы пилотов', style: 'section' });
+        content.push(stintsTbl);
       }
     }
 
     // ── 3. Karts performance (last <table> in #tab-karts) ──
-    if (kartsTables.length >= 2) {
-      const karts = extractTable(kartsTables[kartsTables.length - 1]);
-      if (karts?.body?.length) {
-        if (curY > PH - 50) { doc.addPage(); curY = 14; }
-        sectionTitle('Производительность картов', curY); curY += 4;
-        doc.autoTable({
-          ...TBL, head:karts.head, body:karts.body, startY:curY,
-          columnStyles:{ 6:{ cellWidth:45 } },
-        });
-        curY = doc.lastAutoTable.finalY + 10;
+    if (kartTables.length >= 2) {
+      const kartsTbl = domToPdfTable(kartTables[kartTables.length - 1]);
+      if (kartsTbl) {
+        content.push({ text: 'Производительность картов', style: 'section' });
+        content.push(kartsTbl);
       }
     }
 
     // ── 4. Driver ratings ──
     const ratings = computeDriverRatings();
     if (ratings.length) {
-      if (curY > PH - 60) { doc.addPage(); curY = 14; }
-      sectionTitle('Рейтинг пилотов', curY); curY += 4;
-      doc.autoTable({
-        ...TBL,
-        head: [['Пилот','Темп','Л. круг','Стабильность','Мастерство','Деград.','Итог','Вердикт']],
-        body: ratings.map(r => [
-          r.driver,
-          r.paceScore        ?? '-',
-          r.bestLapScore     ?? '-',
-          r.consistencyScore ?? '-',
-          r.raceCraftScore   ?? '-',
-          r.degradationScore ?? '-',
-          r.total            ?? '-',
-          r.verdict          || '-',
-        ]),
-        startY: curY,
-        columnStyles:{ 0:{ cellWidth:36 }, 7:{ cellWidth:42 } },
+      const rHead = [['Пилот','Темп','Л.круг','Стабильность','Мастерство','Деград.','Итог','Вердикт'].map(t => ({
+        text: t, bold: true, fontSize: 8, color: '#ccdcff', alignment: 'center',
+      }))];
+      const rBody = ratings.map((r, i) => [
+        r.driver,
+        String(r.paceScore        ?? '-'),
+        String(r.bestLapScore     ?? '-'),
+        String(r.consistencyScore ?? '-'),
+        String(r.raceCraftScore   ?? '-'),
+        String(r.degradationScore ?? '-'),
+        { text: String(r.total ?? '-'), bold: true },
+        r.verdict || '-',
+      ].map((v, ci) => typeof v === 'string' ? { text: v, fontSize: 8 } : { ...v, fontSize: 8 }));
+
+      content.push({ text: 'Рейтинг пилотов', style: 'section', pageBreak: 'before' });
+      content.push({
+        table: {
+          headerRows: 1,
+          widths: ['*','auto','auto','auto','auto','auto','auto','*'],
+          body: [...rHead, ...rBody],
+        },
+        layout: tblLayout,
+        margin: [0, 2, 0, 14],
       });
     }
 
-    // ── Footer: page numbers ──
-    const pageCount = doc.internal.getNumberOfPages();
-    const footerMeta = metaParts.join(' · ');
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(160);
-      doc.text(
-        `Kart Race Analyzer  ·  стр. ${i} / ${pageCount}${footerMeta ? '  ·  ' + footerMeta : ''}`,
-        PW / 2, PH - 5, { align:'center' }
-      );
-    }
+    // ── Document definition ──
+    const footerText = 'Kart Race Analyzer' + (metaParts.length ? '  ·  ' + metaParts.join(' · ') : '');
+    const docDef = {
+      pageOrientation: 'landscape',
+      pageMargins: [16, 16, 16, 26],
+      content,
+      styles: {
+        section: { fontSize: 11, bold: true, color: '#3c6ed2', margin: [0, 8, 0, 4] },
+      },
+      defaultStyle: { font: 'Roboto', fontSize: 8.5 },
+      footer: (cur, total) => ({
+        text: `${footerText}   ·   стр. ${cur} / ${total}`,
+        alignment: 'center', fontSize: 7, color: '#999', margin: [0, 4, 0, 0],
+      }),
+    };
 
-    // ── Save ──
+    // ── Download ──
     const nameParts = [meta.date, meta.event, meta.track].filter(Boolean);
-    const filename  = (nameParts.length ? nameParts.join('_') : 'race_results')
-      .replace(/[/\\:*?"<>|]/g,'').replace(/\s+/g,'_');
-    doc.save(filename + '.pdf');
+    const filename = (nameParts.length ? nameParts.join('_') : 'race_results')
+      .replace(/[/\\:*?"<>|]/g, '').replace(/\s+/g, '_');
+    pdfMake.createPdf(docDef).download(filename + '.pdf');
 
   } finally {
     allPanels.forEach((p, i) => { p.style.display = savedDisplay[i]; });
