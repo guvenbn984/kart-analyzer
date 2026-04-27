@@ -2,9 +2,10 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#07070f">
 <title>Kart Race Analyzer</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;0,9..40,900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.min.mjs" type="module"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <link rel="stylesheet" href="colors_and_type.css">
@@ -831,14 +832,126 @@ tbody tr:hover { background: rgba(255,55,95,0.04); }
   color: var(--text-dim);
 }
 
-/* Responsive */
+/* ── Momentum scroll for overflow containers on iOS ─── */
+.table-wrap, .tabs {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Hide tab scrollbar (still scrollable) */
+.tabs {
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+
+/* ── Tablet (≤ 768px) ─────────────────────────────── */
 @media (max-width: 768px) {
-  .upload-grid { grid-template-columns: 1fr; }
+
+  /* Header */
+  .header { padding: 0 14px; gap: 10px; }
+  .header h1 { font-size: 15px; }
+  .header-info { display: none; } /* hide subtitle on mobile */
+  .btn-back { padding: 5px 10px; font-size: 12px; }
+  .btn-export-pdf { padding: 5px 10px; font-size: 12px; }
+
+  /* Upload page */
+  .upload-section { margin: 20px auto; padding: 0 14px; }
+  .upload-grid { grid-template-columns: 1fr; gap: 12px; }
+  .upload-zone { padding: 20px 16px; }
+  .upload-zone .icon { font-size: 2rem; }
+  .upload-zone .label { font-size: 1rem; }
+
+  .session-config { gap: 14px; padding: 12px 14px; }
+
+  .btn-analyze { width: 100%; padding: 14px; font-size: 15px; }
+
+  /* History */
+  .history-section { padding: 0 14px; }
+  .history-filter-input { font-size: 16px; } /* prevent iOS zoom on focus */
+
+  /* App canvas */
+  #app { padding: 12px; }
+
+  /* Tabs — scroll horizontally, compact buttons */
+  .tabs { gap: 0; margin-bottom: 20px; }
+  .tab-btn { padding: 10px 13px; font-size: 12px; flex-shrink: 0; }
+
+  /* Cards */
+  .card { padding: 14px; border-radius: 12px; }
+
+  /* Summary chips: 2 × N grid */
+  .summary-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .summary-card { padding: 12px 14px; border-radius: 12px; }
+  .summary-card .value { font-size: 22px; }
+  .summary-card .label { font-size: 10px; margin-top: 5px; }
+
+  /* Tables — tighter cells, always scrollable */
+  .table-wrap { border-radius: 10px; }
+  thead th { padding: 9px 10px; font-size: 10px; letter-spacing: 0.04em; }
+  tbody td  { padding: 10px 10px; font-size: 12px; }
+
+  /* Two-column layouts → single column */
   .grid-2, .grid-2.wide-left { grid-template-columns: 1fr; }
-  .header { padding: 14px 16px; }
-  .header h1 { font-size: 1.2rem; }
-  .tabs { gap: 0; }
-  .tab-btn { padding: 8px 12px; font-size: 0.8rem; }
+
+  /* Charts — shorter on mobile */
+  .chart-container { min-height: 260px; }
+
+  /* Driver ratings: 1 column */
+  .driver-ratings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Driver rating card: tighter */
+  .driver-rating-card { padding: 14px; }
+  .driver-rating-card .drc-bar-label { width: 76px; font-size: 11px; }
+
+  /* Event info bar: stack naturally */
+  .event-info { gap: 10px 16px; font-size: 11px; padding: 8px 12px; }
+
+  /* Controls bar */
+  .controls { gap: 8px; }
+  .controls select, .controls input[type="number"] { font-size: 16px; } /* prevent iOS zoom */
+
+  /* Driver visibility pills: scroll instead of wrap */
+  .driver-visibility-grid { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+  .driver-vis-btn { flex-shrink: 0; }
+
+  /* Pit kart config buttons */
+  .sc-btn { padding: 6px 14px; font-size: 13px; min-height: 36px; }
+}
+
+/* ── Small phones (≤ 480px) ───────────────────────── */
+@media (max-width: 480px) {
+
+  .header h1 { font-size: 14px; }
+  .btn-back, .btn-export-pdf { padding: 4px 9px; font-size: 11px; }
+
+  #app { padding: 10px; }
+  .card { padding: 12px; border-radius: 10px; }
+
+  /* Summary: still 2 columns but even tighter */
+  .summary-card .value { font-size: 20px; }
+  .summary-row { gap: 6px; }
+
+  /* Tabs: scrollable, even more compact */
+  .tab-btn { padding: 9px 11px; font-size: 11px; }
+
+  /* Tables: minimum padding, small font */
+  thead th { padding: 8px 8px; font-size: 9.5px; }
+  tbody td  { padding: 9px 8px; font-size: 11.5px; }
+
+  /* Charts shorter */
+  .chart-container { min-height: 220px; }
+
+  /* Event info: show only key fields (let flex wrap) */
+  .event-info { font-size: 11px; gap: 8px 12px; }
+
+  /* Upload zones: very compact */
+  .upload-zone { padding: 16px 12px; }
+  .upload-zone .icon { font-size: 1.8rem; margin-bottom: 6px; }
 }
 
 /* ── Print / PDF export ─────────────────────────────────── */
