@@ -2479,7 +2479,15 @@ function renderHeatmap(lapData) {
 }
 
 // ===== Kart & Pit Stop Analysis =====
-const PIT_CONFIG_KEY = 'kartAnalyzerPitConfig';
+const PIT_CONFIG_KEY  = 'kartAnalyzerPitConfig';
+const KART_TECH_KEY   = 'kartAnalyzerKartTech';   // { racingNr -> techNr }
+
+function getKartTechMap() {
+  try { return JSON.parse(localStorage.getItem(KART_TECH_KEY) || '{}'); } catch { return {}; }
+}
+function saveKartTechMap(map) {
+  localStorage.setItem(KART_TECH_KEY, JSON.stringify(map));
+}
 
 // Detect up to numStops pit laps (anomalously long laps) and split into stints.
 // Returns { pitLaps: [{lapNum,lapIdx,lapTime}], stints: [laps[]] }
@@ -2617,16 +2625,22 @@ function renderKartsTab() {
   // Build all pit events across all drivers, sorted chronologically for queue sim
   const allPitEvents = [];
   for (const d of drivers) {
-    for (const pl of (pits[d]?.pitLaps || [])) allPitEvents.push({ driver: d, lapIdx: pl.lapIdx });
+    for (const pl of (pits[d]?.pitLaps || [])) allPitEvents.push({ driver: d, lapIdx: pl.lapIdx, lapNum: pl.lapNum });
   }
   allPitEvents.sort((a, b) => a.lapIdx - b.lapIdx);
 
-  // Pit order: first stop of each driver (for display)
+  // Annotate each event with per-driver stop number (1st stop, 2nd stop, …)
+  const _dSC = {};
+  const allPitEventsAnnotated = allPitEvents.map(e => {
+    _dSC[e.driver] = (_dSC[e.driver] || 0) + 1;
+    return { ...e, stopNum: _dSC[e.driver] };
+  });
+
+  // First-pit map (still needed for table sort)
   const firstPit = {};
   for (const d of drivers) {
     if (pits[d]?.pitLaps?.length) firstPit[d] = pits[d].pitLaps[0].lapNum;
   }
-  const pitOrder = Object.keys(firstPit).sort((a, b) => firstPit[a] - firstPit[b]);
 
   // Load saved pit kart config
   let cfg = {};
@@ -2637,6 +2651,17 @@ function renderKartsTab() {
 
   // Simulate kart history per driver (multi-stop capable)
   const kartHistory = simulateKartQueueMultiStop(allPitEvents, startingKarts, pk1, pk2);
+
+  // Collect all racing kart numbers appearing in this race
+  const allRaceKartNrs = new Set();
+  for (const karts of Object.values(kartHistory)) {
+    for (const k of karts) if (k && k !== '?') allRaceKartNrs.add(k);
+  }
+  if (pk1) allRaceKartNrs.add(pk1);
+  if (pk2) allRaceKartNrs.add(pk2);
+
+  // Load tech-number mapping
+  const techMap = getKartTechMap();
 
   // Build per-driver stint data (dynamic: numStints stints per driver)
   const driverStints = drivers.map(driver => {
@@ -2694,9 +2719,32 @@ function renderKartsTab() {
   };
 
   // ── 1. Config card ──
-  const pitOrderStr = pitOrder.length
-    ? pitOrder.map(d => `${d.split(' ')[0]}(кр.${firstPit[d]})`).join(' → ')
-    : 'Питстопы не обнаружены';
+  // Full chronological pit-event chain (all stops, all drivers)
+  const pitChainHtml = allPitEventsAnnotated.length
+    ? allPitEventsAnnotated.map((e, i) => {
+        const col = STINT_COLORS[(e.stopNum - 1) % STINT_COLORS.length];
+        return (i > 0 ? ' <span style="color:var(--text-dim)">→</span> ' : '')
+          + `<span style="color:${col}">${e.driver.split(' ')[0]}`
+          + `<span style="font-size:0.72rem;opacity:0.8">(С${e.stopNum},кр.${e.lapNum})</span></span>`;
+      }).join('')
+    : '<span style="color:var(--text-dim)">Питстопы не обнаружены</span>';
+
+  // Tech-number inputs for all karts seen in this race
+  const sortedKartNrs = [...allRaceKartNrs].sort((a, b) => +a - +b || a.localeCompare(b));
+  const techInputsHtml = sortedKartNrs.length ? `
+  <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+    <div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:8px">&#128295; Технические номера картов <span style="font-size:0.73rem">(сохраняются глобально)</span>:</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+      ${sortedKartNrs.map(k => `
+        <div style="display:flex;align-items:center;gap:5px;padding:4px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px">
+          <span style="color:var(--accent-blue);font-weight:700;font-size:0.85rem;min-width:24px">К${k}</span>
+          <span style="color:var(--text-dim);font-size:0.8rem">=</span>
+          <input type="text" class="kart-tech-in" data-kart="${k}" value="${techMap[k] || ''}" placeholder="Техн.№"
+            style="width:68px;background:var(--bg-card-alt);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:3px 6px;font-size:0.8rem;outline:none">
+        </div>`).join('')}
+    </div>
+    <button id="saveKartTech" style="padding:5px 14px;background:var(--bg-card-alt);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:0.8rem;transition:border-color 0.2s">Сохранить тех. номера</button>
+  </div>` : '';
 
   const configCard = `
 <div class="card">
@@ -2716,10 +2764,10 @@ function renderKartsTab() {
     </label>
     <button id="applyPitCfg" style="padding:7px 20px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:0.85rem">Применить</button>
   </div>
-  <div style="font-size:0.8rem">
-    <span style="color:var(--text-dim)">&#128681; Порядок 1-го питстопа: </span>
-    <span style="color:var(--text)">${pitOrderStr}</span>
+  <div style="font-size:0.8rem;line-height:1.8">
+    <span style="color:var(--text-dim)">&#128681; Полный порядок смен: </span>${pitChainHtml}
   </div>
+  ${techInputsHtml}
 </div>`;
 
   // ── 2. Dynamic stint table (columns adapt to numStops) ──
@@ -2737,7 +2785,8 @@ function renderKartsTab() {
     for (let s = 0; s < numStints; s++) {
       const col = STINT_COLORS[s] || 'var(--text)';
       const kNr = ds.karts[s];
-      cells += `<td>${kNr && kNr !== '?' ? `<span style="color:${col};font-weight:600">К${kNr}</span>` : '<span style="color:var(--text-dim)">?</span>'}</td>`;
+      const kTech = kNr && techMap[kNr] ? `<br><span style="font-size:0.68rem;color:var(--text-dim)">${techMap[kNr]}</span>` : '';
+      cells += `<td>${kNr && kNr !== '?' ? `<span style="color:${col};font-weight:600">К${kNr}</span>${kTech}` : '<span style="color:var(--text-dim)">?</span>'}</td>`;
       if (s < numStops) {
         const pl = ds.pitLaps[s];
         cells += pl
@@ -2800,9 +2849,13 @@ function renderKartsTab() {
         const speedPct = totalAvg && worstKA > bestKA
           ? Math.round(((worstKA - totalAvg) / (worstKA - bestKA)) * 100) : 50;
         const barCol = speedPct >= 70 ? '#4caf50' : speedPct >= 40 ? '#ffd54f' : '#e94560';
+        const kTechNr = techMap[kNr];
         return `<tr>
-          <td><span style="color:var(--accent-blue);font-weight:700;font-size:1.05rem">К${kNr}</span>
-            ${isPitKart ? '<span style="font-size:0.7rem;color:var(--accent-yellow);margin-left:5px">питкарт</span>' : ''}</td>
+          <td>
+            <span style="color:var(--accent-blue);font-weight:700;font-size:1.05rem">К${kNr}</span>
+            ${isPitKart ? '<span style="font-size:0.7rem;color:var(--accent-yellow);margin-left:5px">питкарт</span>' : ''}
+            ${kTechNr ? `<br><span style="font-size:0.75rem;color:var(--text-dim)">${kTechNr}</span>` : ''}
+          </td>
           <td><div style="display:flex;align-items:center;gap:8px">
             <div style="flex:1;height:7px;background:rgba(255,255,255,0.06);border-radius:4px;overflow:hidden">
               <div style="height:100%;width:${speedPct}%;background:${barCol};border-radius:4px"></div>
@@ -2841,12 +2894,26 @@ function renderKartsTab() {
 
   panel.innerHTML = configCard + stintCard + stintChartCard + kartPerfCard + evoCard;
 
-  // Wire "Применить"
+  // Wire "Применить" (pit karts)
   document.getElementById('applyPitCfg').addEventListener('click', () => {
     const v1 = document.getElementById('pitKart1In').value.trim();
     const v2 = document.getElementById('pitKart2In').value.trim();
     localStorage.setItem(PIT_CONFIG_KEY, JSON.stringify({ pitKart1: v1, pitKart2: v2 }));
     renderKartsTab();
+  });
+
+  // Wire "Сохранить тех. номера"
+  document.getElementById('saveKartTech')?.addEventListener('click', () => {
+    const updated = { ...getKartTechMap() };
+    document.querySelectorAll('.kart-tech-in').forEach(inp => {
+      const v = inp.value.trim();
+      if (v) updated[inp.dataset.kart] = v;
+      else delete updated[inp.dataset.kart];
+    });
+    saveKartTechMap(updated);
+    // Visual confirmation
+    const btn = document.getElementById('saveKartTech');
+    if (btn) { btn.textContent = '✓ Сохранено'; setTimeout(() => renderKartsTab(), 800); }
   });
 
   // Charts
